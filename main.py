@@ -12,15 +12,7 @@ import serial
 import serial.tools.list_ports
 from pyproj import Geod
 
-
-def utc_data() -> str:
-    """
-    Function returns current time and date for position.
-    """
-    # UTC time for - 'fix taken at ...'
-    time_utc: str = datetime.datetime.utcnow().strftime('%H%M%S')
-    date_utc: str = datetime.datetime.utcnow().strftime('%d%m%y')
-    return time_utc, date_utc
+from nmea_gps import Gpgga, Gpgll, Gprmc, Gpgsa, GpgsvGroup, Gphdt, Gpzda
 
 
 def nmea_check_sum(data: str) -> str:
@@ -42,18 +34,23 @@ def nmea_check_sum(data: str) -> str:
     return f'0{hex_str}'.upper()
 
 
-def position_input() -> list:
+def position_input() -> dict:
     """
     Function asks for position and checks validity of entry data.
-    Function returns position list in format ['8900', 'S', '17000', 'W'].
+    Function returns position.
     """
     while True:
         print('\n### Enter unit position (format - 5430N 01920E): ###')
         position_data = input('>>> ')
-# >>>>>>>>> only for tests!!!! <<<<<<<<<<<<
         if position_data == '':
-            return ['5430.000', 'N', '01920.000', 'E']
-# >>>>>>>>> only for tests!!!! <<<<<<<<<<<<
+            # return ['5430.000', 'N', '01920.000', 'E']
+            position_dict = {
+                'latitude_value': '5430.000',
+                'latitude_direction': 'N',
+                'longitude_value': '01920.000',
+                'longitude_direction': 'E',
+            }
+            return position_dict
         position_regex = re.compile(r'''^(
             ([0-8]\d[0-5]\d|9000)                               # Latitude
             (N|S)
@@ -63,9 +60,17 @@ def position_input() -> list:
             )$''', re.VERBOSE)
         mo = position_regex.search(position_data.upper().strip())
         if mo:
+            # Returns position data
+            position_dict = {
+                'latitude_value': f'{float(mo.group(2)):.3f}',
+                'latitude_direction': mo.group(3),
+                'longitude_value': f'{float(mo.group(4)):.3f}',
+                'longitude_direction': mo.group(7),
+            }
             # Returns position data - ['5432.000', 'N', '01832.000', 'E'].
-            return [f'{float(mo.group(2)):.3f}', mo.group(3),
-                    f'{float(mo.group(4)):.3f}', mo.group(7)]
+            # return [f'{float(mo.group(2)):.3f}', mo.group(3),
+            #         f'{float(mo.group(4)):.3f}', mo.group(7)]
+            return position_dict
         print('\nError: Wrong entry! Try again.')
 
 
@@ -108,33 +113,34 @@ def nmea_data(nav_dict: dict):
     gps_position, gps_speed = nav_dict['position'], nav_dict['gps_speed']
     gps_heading = nav_dict['curr_heading']
     gps_altitude = nav_dict['gps_altitude_amsl']
-    utc_time, utc_date = utc_data()
 
-    gga_string = f'$GPGGA,{utc_time}.00,{gps_position[0]},'\
-        f'{gps_position[1]},{gps_position[2]},{gps_position[3]},'\
-        f'1,08,0.9,{gps_altitude},M,32.5,M,,*'
-    gll_string = f'$GPGLL,{gps_position[0]},{gps_position[1]},'\
-        f'{gps_position[2]},{gps_position[3]},{utc_time}.00,A,*'
-    rmc_string = f'$GPRMC,{utc_time},A,{gps_position[0]},{gps_position[1]},'\
-        f'{gps_position[2]},{gps_position[3]},{gps_speed},{gps_heading},'\
-        f'{utc_date},,,A*'
-    # Dumb NMEA sentences (GSA, GSV)
-    gsa_string = '$GPGSA,A,3,22,27,10,28,11,24,32,01,14,,,,1.69,0.87,1.45*'
-    gsv_string_list = [
-        '$GPGSV,3,1,12,01,55,288,39,08,44,194,27,10,26,065,33,11,61,278,28*',
-        '$GPGSV,3,2,12,14,43,134,33,17,04,325,,18,81,268,32,22,39,239,31*',
-        '$GPGSV,3,3,12,24,08,023,26,27,16,169,38,28,21,305,23,32,49,092,37*',
-    ]
-    gphdt_string = f'$GPHDT,{gps_heading},T*'
-    # List of all NMEA records with added check-sums:
-    nmea_data_list = [f'{gga_string}{nmea_check_sum(gga_string)}\r\n',
-                      f'{gsa_string}{nmea_check_sum(gsa_string)}\r\n',
-                      f'{gsv_string_list[0]}{nmea_check_sum(gsv_string_list[0])}\r\n',
-                      f'{gsv_string_list[1]}{nmea_check_sum(gsv_string_list[1])}\r\n',
-                      f'{gsv_string_list[2]}{nmea_check_sum(gsv_string_list[2])}\r\n',
-                      f'{gll_string}{nmea_check_sum(gll_string)}\r\n',
-                      f'{rmc_string}{nmea_check_sum(rmc_string)}\r\n',
-                      f'{gphdt_string}{nmea_check_sum(gphdt_string)}\r\n']
+    # UTC - data and time ('fix taken at ...')
+    utc_date_time = datetime.datetime.utcnow()
+
+    gpgsv_group = GpgsvGroup(15)
+    gpgsa_sentence = Gpgsa(gpgsv_group)
+    gga_sentence = Gpgga(gpgsa_object=gpgsa_sentence,
+                         utc_time=utc_date_time,
+                         position=gps_position,
+                         altitude=gps_altitude,
+                         antenna_altitude_above_msl=32.5)
+    gpgll_sentence = Gpgll(utc_time=utc_date_time,
+                           position=gps_position)
+    gprmc_sentence = Gprmc(utc_time=utc_date_time,
+                           position=gps_position,
+                           sog=gps_speed,
+                           cmg=gps_heading)
+    gphdt_sentence = Gphdt(heading=gps_heading)
+    gpzda_sentence = Gpzda(utc_time=utc_date_time)
+
+    nmea_data_list = [f'{gga_sentence}',
+                      f'{gpgsa_sentence}',
+                      *[f'{gpgsv}' for gpgsv in gpgsv_group.gpgsv_instances],
+                      f'{gpgll_sentence}',
+                      f'{gprmc_sentence}',
+                      f'{gphdt_sentence}',
+                      f'{gpzda_sentence}',
+                      ]
     # nmea_data_list = [
     #    '$GPGGA,140041.00,5436.70976,N,01839.98065,E,1,09,0.87,21.7,M,32.5,M,,*60\r\n',
     #    '$GPGSA,A,3,22,27,10,28,11,24,32,01,14,,,,1.69,0.87,1.45*0E\r\n',
@@ -306,7 +312,7 @@ nav_data_dict = {'gps_speed': '100.035',
                  'init_heading': '45.0',
                  'curr_heading': '45.0',
                  'gps_altitude_amsl': '15.2',
-                 'position': [],
+                 'position': {},
                  'pos_type': None}
 
 while True:

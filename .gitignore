@@ -2,3 +2,4 @@
 *.db
 extra/
 venv/
+__pycache__/
