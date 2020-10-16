@@ -10,40 +10,21 @@ import platform
 
 import serial
 import serial.tools.list_ports
-from pyproj import Geod
+from apscheduler.schedulers.background import BackgroundScheduler
 
-from nmea_gps import Gpgga, Gpgll, Gprmc, Gpgsa, GpgsvGroup, Gphdt, Gpzda
-
-
-def nmea_check_sum(data: str) -> str:
-    """
-    Function changes ASCII char to decimal representation, performs xor operation
-    and returns NMEA check-sum i hex notation.
-    """
-    # Extracts data from string between range $ --- *
-    data = data[data.index('$') + 1: data.index('*')]
-    check_sum = 0
-    for char in data:
-        num = bytearray(char, encoding='utf-8')[0]
-        # XOR operation.
-        check_sum = (check_sum ^ num)
-    # Returns only hex digits string without leading 0x.
-    hex_str: str = str(hex(check_sum))[2:]
-    if len(hex_str) == 2:
-        return hex_str.upper()
-    return f'0{hex_str}'.upper()
+from nmea_gps import NmeaMsg
 
 
 def position_input() -> dict:
     """
-    Function asks for position and checks validity of entry data.
+    Function query for position and checks validity of entry data.
     Function returns position.
     """
     while True:
         print('\n### Enter unit position (format - 5430N 01920E): ###')
         position_data = input('>>> ')
         if position_data == '':
-            # return ['5430.000', 'N', '01920.000', 'E']
+            # Default position
             position_dict = {
                 'latitude_value': '5430.000',
                 'latitude_direction': 'N',
@@ -62,21 +43,18 @@ def position_input() -> dict:
         if mo:
             # Returns position data
             position_dict = {
-                'latitude_value': f'{float(mo.group(2)):.3f}',
+                'latitude_value': f'{float(mo.group(2)):08.3f}',
                 'latitude_direction': mo.group(3),
-                'longitude_value': f'{float(mo.group(4)):.3f}',
+                'longitude_value': f'{float(mo.group(4)):09.3f}',
                 'longitude_direction': mo.group(7),
             }
-            # Returns position data - ['5432.000', 'N', '01832.000', 'E'].
-            # return [f'{float(mo.group(2)):.3f}', mo.group(3),
-            #         f'{float(mo.group(4)):.3f}', mo.group(7)]
             return position_dict
         print('\nError: Wrong entry! Try again.')
 
 
 def ip_addr_port_num(option: str) -> tuple:
     """
-    Function asks for IP address and port number for connection.
+    Function query for IP address and port number for connection.
     """
     while True:
         if option == 'telnet':
@@ -106,185 +84,48 @@ def ip_addr_port_num(option: str) -> tuple:
         print(f'\nError: Wrong format use - 192.168.10.10:2020.')
 
 
-def nmea_data(nav_dict: dict):
+def fix_or_move() -> bool:
     """
-    Func returns all NMEA data sentences in one overall NMEA data list.
+    Function query for position type (fixed or in move).
     """
-    gps_position, gps_speed = nav_dict['position'], nav_dict['gps_speed']
-    gps_heading = nav_dict['curr_heading']
-    gps_altitude = nav_dict['gps_altitude_amsl']
-
-    # UTC - data and time ('fix taken at ...')
-    utc_date_time = datetime.datetime.utcnow()
-
-    gpgsv_group = GpgsvGroup(15)
-    gpgsa_sentence = Gpgsa(gpgsv_group)
-    gga_sentence = Gpgga(gpgsa_object=gpgsa_sentence,
-                         utc_time=utc_date_time,
-                         position=gps_position,
-                         altitude=gps_altitude,
-                         antenna_altitude_above_msl=32.5)
-    gpgll_sentence = Gpgll(utc_time=utc_date_time,
-                           position=gps_position)
-    gprmc_sentence = Gprmc(utc_time=utc_date_time,
-                           position=gps_position,
-                           sog=gps_speed,
-                           cmg=gps_heading)
-    gphdt_sentence = Gphdt(heading=gps_heading)
-    gpzda_sentence = Gpzda(utc_time=utc_date_time)
-
-    nmea_data_list = [f'{gga_sentence}',
-                      f'{gpgsa_sentence}',
-                      *[f'{gpgsv}' for gpgsv in gpgsv_group.gpgsv_instances],
-                      f'{gpgll_sentence}',
-                      f'{gprmc_sentence}',
-                      f'{gphdt_sentence}',
-                      f'{gpzda_sentence}',
-                      ]
-    # nmea_data_list = [
-    #    '$GPGGA,140041.00,5436.70976,N,01839.98065,E,1,09,0.87,21.7,M,32.5,M,,*60\r\n',
-    #    '$GPGSA,A,3,22,27,10,28,11,24,32,01,14,,,,1.69,0.87,1.45*0E\r\n',
-    #    '$GPGSV,3,1,12,01,55,288,39,08,44,194,27,10,26,065,33,11,61,278,28*76\r\n',
-    #    '$GPGSV,3,2,12,14,43,134,33,17,04,325,,18,81,268,32,22,39,239,31*74\r\n',
-    #    '$GPGSV,3,3,12,24,08,023,26,27,16,169,38,28,21,305,23,32,49,092,37*7B\r\n',
-    #    '$GPGLL,5436.70976,N,01839.98065,E,064341.00,A,A*67\r\n']
-    return nmea_data_list
-
-
-def new_gps_position_calc(position, heading, speed, timers_dict):
-    '''
-    Function returns position when unit is in move.
-    '''
-    # Calculate time from last position.
-    # actual_time = time.time()
-    actual_time = time.perf_counter()
-    time_delta = actual_time - timers_dict['pos_time']
-    # assignment of coords.
-    lat_a, lat_direction, lon_a, lon_direction = position
-    # Knots to m/s conversion.
-    speed_ms = float(speed) * 0.514444
-    # Distance in meters.
-    distance = speed_ms * time_delta
-
-    if lat_direction.lower() == 'n':
-        lat_start = float(lat_a[: 2]) + (float(lat_a[2:])/60.)
-    else:
-        lat_start = - float(lat_a[: 2]) - (float(lat_a[2:])/60.)
-    if lon_direction.lower() == 'e':
-        lon_start = float(lon_a[: 3]) + (float(lon_a[3:])/60.)
-    else:
-        lon_start = -float(lon_a[: 3]) - (float(lon_a[3:])/60.)
-
-    # Use WGS84 ellipsoid.
-    g = Geod(ellps='WGS84')
-    # forward transformation - returns longitude, latitude, back azimuth of terminus points
-    lon_end, lat_end, back_azimuth = g.fwd(lon_start, lat_start, float(heading), distance)
-
-    lon_end, lat_end = abs(lon_end), abs(lat_end)
-    # New GPS position after calculation.
-    position = [f'{int(lat_end):02}{round(lat_end % int(lat_end) * 60,3):02.3f}',
-                f'{lat_direction.upper()}',
-                f'{int(lon_end):03}{round(lon_end % int(lon_end) * 60,3):02.3f}',
-                f'{lon_direction.upper()}']
-    # New position fix time.
-    # timers_dict['pos_time'] = time.time()
-    timers_dict['pos_time'] = time.perf_counter()
-    return position, timers_dict
-
-
-def fix_or_move() -> str:
-    """
-    Function asks for position type (fixed or in move).
-    """
-    # Asks for position type.
     while True:
         print('\n### Choose type of position: ')
         print('1 - Unit in a fixed position.')
         print('2 - Unit in move.')
         choose = input('>>> ')
         if choose == '1':
-            return 'fixed'
+            return False
         elif choose == '2':
-            return 'move'
+            return True
 
 
 def client_thread(conn, addr, nav_dict) -> None:
     """
     Function creates separate thread for each connected client.
     """
-    first_run = True
+    nmea_obj = NmeaMsg(position=nav_dict['position'],
+                       altitude=nav_dict['gps_altitude_amsl'],
+                       speed=nav_dict['gps_speed'],
+                       heading=nav_dict['curr_heading'],
+                       in_move=nav_dict['in_move'])
     while True:
-        if nav_dict['pos_type'] == 'move':
-            if first_run:
-                nmea_list, timers_dict = nmea_data_to_send(
-                    nav_dict, first_run=first_run)
-                first_run = False
-            else:
-                nmea_list, timers_dict = nmea_data_to_send(nav_dict, timers_dict)
-        elif nav_dict['pos_type'] == 'fixed':
-            nmea_list = nmea_data(nav_dict)
+        nmea_list = [f'{_}' for _ in next(nmea_obj)]
         try:
-            for data in nmea_list:
-                conn.sendall(data.encode())
+            for nmea in nmea_list:
+                conn.sendall(nmea.encode())
                 time.sleep(0.1)
-            time.sleep(1)
-        except:
+            time.sleep(0.2)
+        except:                                         # more specific except!!!
             break
     # Came out of the loop.
     conn.close()
     print(f'Connection closed with {addr[0]}:{addr[1]}')
 
 
-def nmea_data_to_send(nav_dict: dict, timers_dict=None, first_run=False):
-    """
-    Function prepares NMEA data to send.
-    """
-    # Local auxiliary variables.
-    gps_position, gps_speed = nav_dict['position'], nav_dict['gps_speed']
-    if first_run:
-        # Set time stamps for new position and new heading.
-        timers_dict = {'pos_time': time.perf_counter(),
-                       'head_time': time.perf_counter()}
-        # Prepares NMEA data for first position - in move.
-        nmea_list = nmea_data(nav_dict)
-    else:
-        # Calculate new heading - in move.
-        # The new heading is calculated on the basis of elapsed time
-        actual_time = time.perf_counter()
-        # The angle by which it is going to change course.
-        turn_angle = 120
-        # Change heading after 5 second on a steady course.
-        if actual_time - timers_dict['head_time'] > 60:
-            new_course = float(nav_dict['curr_heading']) + 5
-            initial_course = float(nav_dict['init_heading'])
-            if new_course >= 360:
-                new_course -= 360
-            elif new_course < 0:
-                new_course = 360 - new_course
-            nav_dict['curr_heading'] = str(new_course)
-
-            # Reset the time when the course changes were made by 'turn_angle'
-            if abs(new_course - initial_course) >= turn_angle:
-                nav_dict['init_heading'] = str(new_course)
-                timers_dict['head_time'] = time.perf_counter()
-
-        # Calculate new position - in move.
-        gps_position, timers_dict = new_gps_position_calc(
-            gps_position, nav_dict['curr_heading'], gps_speed, timers_dict)
-        # Prepares NMEA data for new position and new heading.
-        # nav_dict['init_heading'] = nav_dict['curr_heading']
-        nav_dict['position'] = gps_position
-        nmea_list = nmea_data(nav_dict)
-    return nmea_list, timers_dict
-
-
 ##
 # MAIN PART #
 ##
-# TODO:    1. Object in fix position
-# TODO:    2. Object in move (enter speed, start position and heading)
 # TODO:     Enter gps_speed and gps_heading by hand when in move.
-#
 # TODO:     Add try-except when serial port is busy
 # Driver Code
 # if __name__ == '__main__':
@@ -307,13 +148,15 @@ gps_speed = '100.035'
 # Initial heading.
 gps_heading = '45.0'
 
+scheduler = BackgroundScheduler()
+
 # test nav_data_dictionary
 nav_data_dict = {'gps_speed': '100.035',
                  'init_heading': '45.0',
                  'curr_heading': '45.0',
                  'gps_altitude_amsl': '15.2',
                  'position': {},
-                 'pos_type': None}
+                 'in_move': False}
 
 while True:
     try:
@@ -382,7 +225,7 @@ if emulator_option == '1':
     nav_data_dict['position'] = position_input()
 
     # Choose type of position.
-    nav_data_dict['pos_type'] = fix_or_move()
+    nav_data_dict['in_move'] = fix_or_move()
 
     # Open serial port.
     # TODO: add try-except when serial port is busy
@@ -394,21 +237,17 @@ if emulator_option == '1':
         print(
             f'Serial port settings: {serial_set["port"]} {serial_set["baudrate"]} {serial_set["bytesize"]}{serial_set["parity"]}{serial_set["stopbits"]}')
         print('Sending NMEA data...')
-        first_run = True
+        nmea_obj = NmeaMsg(position=nav_data_dict['position'],
+                           altitude=nav_data_dict['gps_altitude_amsl'],
+                           speed=nav_data_dict['gps_speed'],
+                           heading=nav_data_dict['curr_heading'],
+                           in_move=nav_data_dict['in_move'])
         while True:
-            if nav_data_dict['pos_type'] == 'move':
-                if first_run:
-                    nmea_list, timers_dict = nmea_data_to_send(
-                        nav_data_dict, first_run=first_run)
-                    first_run = False
-                else:
-                    nmea_list, timers_dict = nmea_data_to_send(nav_data_dict, timers_dict)
-            elif nav_data_dict['pos_type'] == 'fixed':
-                nmea_list = nmea_data(nav_data_dict)
-            for data in nmea_list:
-                ser.write(str.encode(data))
+            nmea_list = [f'{_}' for _ in next(nmea_obj)]
+            for nmea in nmea_list:
+                ser.write(str.encode(nmea))
                 time.sleep(0.1)
-            time.sleep(1)
+            time.sleep(0.5)
 
 elif emulator_option == '2':
     # Runs telnet server witch emulates NMEA device.
@@ -420,8 +259,7 @@ elif emulator_option == '2':
     # position = position_input()
     nav_data_dict['position'] = position_input()
     # Choose type of position.
-    # pos_type = fix_or_move()
-    nav_data_dict['pos_type'] = fix_or_move()
+    nav_data_dict['in_move'] = fix_or_move()
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         print('Socket created')
@@ -451,11 +289,11 @@ elif emulator_option == '2':
 elif emulator_option == '3':
     # Runs TCP or UDP NMEA stream to designated host.
 
-    # Ask for position:
+    # Query for position:
     nav_data_dict['position'] = position_input()
 
     # Choose type of position.
-    nav_data_dict['pos_type'] = fix_or_move()
+    nav_data_dict['in_move'] = fix_or_move()
 
     # Ask for remote IP addr and port number.
     srv_ip_address, srv_port = ip_addr_port_num('stream')
@@ -467,24 +305,18 @@ elif emulator_option == '3':
         try:
             s.connect((srv_ip_address, srv_port))
             print(f'\nSending NMEA data - TCP stream to {srv_ip_address}:{srv_port}...')
-
-            first_run = True
+            nmea_obj = NmeaMsg(position=nav_data_dict['position'],
+                               altitude=nav_data_dict['gps_altitude_amsl'],
+                               speed=nav_data_dict['gps_speed'],
+                               heading=nav_data_dict['curr_heading'],
+                               in_move=nav_data_dict['in_move'])
             while True:
-                if nav_data_dict['pos_type'] == 'move':
-                    if first_run:
-                        nmea_list, timers_dict = nmea_data_to_send(
-                            nav_data_dict, first_run=first_run)
-                        first_run = False
-                    else:
-                        nmea_list, timers_dict = nmea_data_to_send(nav_data_dict, timers_dict)
-                elif nav_data_dict['pos_type'] == 'fixed':
-                    nmea_list = nmea_data(nav_data_dict)
-
-                for data in nmea_list:
-                    s.send(data.encode())    # lub conn.sendall(data.encode('ascii'))
+                nmea_list = [f'{_}' for _ in next(nmea_obj)]
+                for nmea in nmea_list:
+                    s.send(nmea.encode())    # or conn.sendall(data.encode('ascii'))
+                    time.sleep(0.1)
                     # Send one packet with NMEA sentence in every 1 sek.
-                    time.sleep(1)
-                # time.sleep(1)
+                time.sleep(0.2)
             s.close()
         except (OSError, TimeoutError, ConnectionRefusedError) as err:
             print(f'*** Error: {err} ***')
@@ -496,23 +328,18 @@ elif emulator_option == '3':
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print(f'\nSending NMEA data - UDP stream to {srv_ip_address}:{srv_port}...')
 
-        first_run = True
+        nmea_obj = NmeaMsg(position=nav_data_dict['position'],
+                           altitude=nav_data_dict['gps_altitude_amsl'],
+                           speed=nav_data_dict['gps_speed'],
+                           heading=nav_data_dict['curr_heading'],
+                           in_move=nav_data_dict['in_move'])
         while True:
-            if nav_data_dict['pos_type'] == 'move':
-                if first_run:
-                    nmea_list, timers_dict = nmea_data_to_send(
-                        nav_data_dict, first_run=first_run)
-                    first_run = False
-                else:
-                    nmea_list, timers_dict = nmea_data_to_send(nav_data_dict, timers_dict)
-            elif nav_data_dict['pos_type'] == 'fixed':
-                nmea_list = nmea_data(nav_data_dict)
-
-            for data in nmea_list:
+            nmea_list = [f'{_}' for _ in next(nmea_obj)]
+            for nmea in nmea_list:
                 try:
-                    s.sendto(data.encode(), (srv_ip_address, srv_port))
+                    s.sendto(nmea.encode(), (srv_ip_address, srv_port))
                     # Send one packet with NMEA sentence in every 1 sek.
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                 except OSError as err:
                     print(f'*** Error: {err} ***')
                     sys.exit()
