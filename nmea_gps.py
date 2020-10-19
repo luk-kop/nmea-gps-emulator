@@ -6,7 +6,7 @@ import time
 from pyproj import Geod
 
 
-# static method w NmeaMsg
+# static method in NmeaMsg
 def check_sum(data):
     """
     Function changes ASCII char to decimal representation, perform XOR operation of
@@ -29,13 +29,12 @@ class NmeaMsg:
     """
     The class represent a group of NMEA sentences.
     """
-    def __init__(self, position, altitude, speed, heading, in_move):
+    def __init__(self, position, altitude, speed, heading):
         # Instance attributes
         self.utc_date_time = datetime.datetime.utcnow()
         self.position = position
         self.speed = speed
         self.heading = heading
-        self.in_move = in_move
         # NMEA sentences initialization
         self.gpgsv_group = GpgsvGroup(sats_total=15)
         self.gpgsa = Gpgsa(gpgsv_group=self.gpgsv_group)
@@ -61,14 +60,18 @@ class NmeaMsg:
                                self.gpzda,]
 
     def __next__(self):
-        self.utc_date_time_prev = self.utc_date_time
+        # self.utc_date_time_prev = self.utc_date_time
+        utc_date_time_prev = self.utc_date_time
         self.utc_date_time = datetime.datetime.utcnow()
-        if self.in_move:
-            self.__position_update()
+        if float(self.speed) > 0:
+            self.position_update(utc_date_time_prev)
         self.gga.utc_time = self.utc_date_time
         self.gpgll.utc_time = self.utc_date_time
         self.gprmc.utc_time = self.utc_date_time
         self.gprmc.utc_time = self.utc_date_time
+        self.gprmc.sog = self.speed
+        self.gprmc.cmg = self.heading
+        self.gphdt.heading = self.heading
         self.gpzda.utc_time = self.utc_date_time
         # raise StopIteration
         return self.nmea_sentences
@@ -82,12 +85,12 @@ class NmeaMsg:
             nmea_msgs_str += f'{nmea}'
         return nmea_msgs_str
 
-    def __position_update(self):
+    def position_update(self, utc_date_time_prev: datetime):
         """
         Update position when unit in move.
         """
         # The time that has elapsed since the last fix
-        time_delta = (self.utc_date_time - self.utc_date_time_prev).total_seconds()
+        time_delta = (self.utc_date_time - utc_date_time_prev).total_seconds()
         # Knots to m/s conversion.
         speed_ms = float(self.speed) * 0.514444
         # Distance in meters.
@@ -435,13 +438,12 @@ if __name__ == "__main__":
     nmea_obj = NmeaMsg(position=position,
                        altitude=21.7,
                        speed='100.00',
-                       heading='90.00',
-                       in_move=True)
+                       heading='90.00')
     # print(nmea_obj)
     # print('------------')
     while True:
         a = next(nmea_obj)
-        nmea_obj.position_update()
+        nmea_obj.position_update(datetime.datetime.utcnow())
         for nmea in a:
             print(nmea)
             time.sleep(0.05)
