@@ -6,35 +6,20 @@ import time
 from pyproj import Geod
 
 
-# static method in NmeaMsg
-def check_sum(data):
-    """
-    Function changes ASCII char to decimal representation, perform XOR operation of
-    all the bytes between the $ and the * (not including the delimiters themselves),
-    and returns NMEA check-sum in hexadecimal notation.
-    """
-    check_sum: int = 0
-    for char in data:
-        num = bytearray(char, encoding='utf-8')[0]
-        # XOR operation.
-        check_sum = (check_sum ^ num)
-    # Returns only hex digits string without leading 0x.
-    hex_str: str = str(hex(check_sum))[2:]
-    if len(hex_str) == 2:
-        return hex_str.upper()
-    return f'0{hex_str}'.upper()
-
-
 class NmeaMsg:
     """
     The class represent a group of NMEA sentences.
     """
-    def __init__(self, position, altitude, speed, heading):
+    def __init__(self, position: dict, altitude: float, speed: float, heading: float):
         # Instance attributes
         self.utc_date_time = datetime.datetime.utcnow()
         self.position = position
         self.speed = speed
+        # The unit's speed provided by the user during the operation of the script
+        self.speed_targeted = speed
         self.heading = heading
+        # The unit's heading provided by the user during the operation of the script
+        self.heading_targeted = heading
         # NMEA sentences initialization
         self.gpgsv_group = GpgsvGroup(sats_total=15)
         self.gpgsa = Gpgsa(gpgsv_group=self.gpgsv_group)
@@ -60,11 +45,14 @@ class NmeaMsg:
                                self.gpzda,]
 
     def __next__(self):
-        # self.utc_date_time_prev = self.utc_date_time
         utc_date_time_prev = self.utc_date_time
         self.utc_date_time = datetime.datetime.utcnow()
-        if float(self.speed) > 0:
+        if self.speed > 0:
             self.position_update(utc_date_time_prev)
+        if self.heading != self.heading_targeted:
+            self._heading_update()
+        if self.speed != self.speed_targeted:
+            self._speed_update()
         self.gga.utc_time = self.utc_date_time
         self.gpgll.utc_time = self.utc_date_time
         self.gprmc.utc_time = self.utc_date_time
@@ -92,7 +80,7 @@ class NmeaMsg:
         # The time that has elapsed since the last fix
         time_delta = (self.utc_date_time - utc_date_time_prev).total_seconds()
         # Knots to m/s conversion.
-        speed_ms = float(self.speed) * 0.514444
+        speed_ms = self.speed * 0.514444
         # Distance in meters.
         distance = speed_ms * time_delta
         # Assignment of coords.
@@ -112,7 +100,7 @@ class NmeaMsg:
         # Use WGS84 ellipsoid.
         g = Geod(ellps='WGS84')
         # forward transformation - returns longitude, latitude, back azimuth of terminus points
-        lon_end, lat_end, back_azimuth = g.fwd(lon_start, lat_start, float(self.heading), distance)
+        lon_end, lat_end, back_azimuth = g.fwd(lon_start, lat_start, self.heading, distance)
         # Change direction when cross the equator or prime meridian (Greenwich)
         if lat_end >= 0:
             lat_direction = 'N'
@@ -144,6 +132,85 @@ class NmeaMsg:
         self.position['latitude_direction'] = f'{lat_direction.upper()}'
         self.position['longitude_value'] = f'{lon_degrees:03}{lon_minutes:06.3f}'
         self.position['longitude_direction'] = f'{lon_direction.upper()}'
+
+    def _heading_update(self):
+        """
+        Updates the unit's heading (course) in case of changes performed by the user.
+        """
+        head_target = self.heading_targeted
+        head_current = self.heading
+        turn_angle = head_target - head_current
+        # Heading increment in each position update
+        head_increment = 3
+        # Immediate change of course when the increment <= turn_angle
+        if abs(turn_angle) <= head_increment:
+            head_current = head_target
+        else:
+            # The unit's heading is increased gradually (with 'head_increment')
+            if head_target > head_current:
+                if abs(turn_angle) > 180:
+                    if turn_angle > 0:
+                        head_current -= head_increment
+                    else:
+                        head_current += head_increment
+                else:
+                    if turn_angle > 0:
+                        head_current += head_increment
+                    else:
+                        head_current -= head_increment
+            else:
+                if abs(turn_angle) > 180:
+                    if turn_angle > 0:
+                        head_current -= head_increment
+                    else:
+                        head_current += head_increment
+                else:
+                    if turn_angle > 0:
+                        head_current += head_increment
+                    else:
+                        head_current -= head_increment
+        # Heading range: 0-359
+        if head_current == 360:
+            head_current = 0
+        elif head_current > 360:
+            head_current -= 360
+        self.heading = round(head_current, 1)
+
+    def _speed_update(self):
+        """
+        Updates the unit's speed in case of changes performed by the user.
+        """
+        speed_target = self.speed_targeted
+        speed_current = self.speed
+        speed_diff = speed_target - speed_current
+        # Heading increment in each position update
+        speed_increment = 3
+        # Immediate change of course when the increment <= turn_angle
+        if abs(speed_diff) <= speed_increment:
+            speed_current = speed_target
+        elif speed_target > speed_current:
+            speed_current += speed_increment
+        else:
+            speed_current -= speed_increment
+        self.speed = round(speed_current, 3)
+
+    @staticmethod
+    def check_sum(data: str):
+        """
+        Function changes ASCII char to decimal representation, perform XOR operation of
+        all the bytes between the $ and the * (not including the delimiters themselves),
+        and returns NMEA check-sum in hexadecimal notation.
+        """
+        check_sum: int = 0
+        for char in data:
+            num = bytearray(char, encoding='utf-8')[0]
+            # XOR operation.
+            check_sum = (check_sum ^ num)
+        # Returns only hex digits string without leading 0x.
+        hex_str: str = str(hex(check_sum))[2:]
+        if len(hex_str) == 2:
+            return hex_str.upper()
+        return f'0{hex_str}'.upper()
 
 
 class Gpgga:
@@ -185,7 +252,7 @@ class Gpgga:
                       f'{self.num_of_sats:02d},{self.hdop},{self.altitude},M,' \
                       f'{self.antenna_altitude_above_msl},M,{self.dgps_last_update},' \
                       f'{self.dgps_ref_station_id}'
-        return f'${nmea_output}*{check_sum(nmea_output)}\r\n'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
 class Gpgll:
@@ -216,7 +283,7 @@ class Gpgll:
                       f'{self.position["latitude_direction"]},{self.position["longitude_value"]},' \
                       f'{self.position["longitude_direction"]},{self.utc_time}.000,' \
                       f'{self.data_status},{self.faa_mode}'
-        return f'${nmea_output}*{check_sum(nmea_output)}\r\n'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
 class Gprmc:
@@ -264,9 +331,9 @@ class Gprmc:
         nmea_output = f'{self.sentence_id},{self.utc_time}.000,{self.data_status},' \
                       f'{self.position["latitude_value"]},{self.position["latitude_direction"]},' \
                       f'{self.position["longitude_value"]},{self.position["longitude_direction"]},' \
-                      f'{self.sog},{self.cmg},{self.utc_date},' \
+                      f'{self.sog:.3f},{self.cmg},{self.utc_date},' \
                       f'{self.magnetic_var_value},{self.magnetic_var_direct},{self.faa_mode}'
-        return f'${nmea_output}*{check_sum(nmea_output)}\r\n'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
 class Gpgsa:
@@ -299,7 +366,7 @@ class Gpgsa:
         nmea_output = f'{self.sentence_id},{self.select_mode},{self.mode},' \
                       f'{",".join(sats_ids_output)},' \
                       f'{self.pdop},{self.hdop},{self.vdop}'
-        return f'${nmea_output}*{check_sum(nmea_output)}\r\n'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
 class GpgsvGroup:
@@ -369,7 +436,7 @@ class Gpgsv:
             azimuth: str = f"{random.randint(0, 359):03d}"
             snr: str = f"{random.randint(0, 99):02d}"
             nmea_output += f',{sattelite_id},{elevation},{azimuth},{snr}'
-        return f'${nmea_output}*{check_sum(nmea_output)}\r\n'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
 class Gphdt:
@@ -385,7 +452,7 @@ class Gphdt:
 
     def __str__(self):
         nmea_output = f'{self.sentence_id},{self.heading},T'
-        return f'${nmea_output}*{check_sum(nmea_output)}\r\n'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
 class Gpzda:
@@ -421,26 +488,24 @@ class Gpzda:
     def __str__(self):
         # Local Zone not used
         nmea_output = f'{self.sentence_id},{self.utc_time}.000,{self.utc_date},0,0'
-        return f'${nmea_output}*{check_sum(nmea_output)}\r\n'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
 if __name__ == "__main__":
     # only for tests
     utc_time = datetime.datetime.utcnow()
-    # GPGLL
     position: dict = {
         'latitude_value': '6059.999',
         'latitude_direction': 'N',
-        'longitude_value': '00000.663',
+        'longitude_value': '01023.663',
         'longitude_direction': 'W',
     }
 
     nmea_obj = NmeaMsg(position=position,
                        altitude=21.7,
-                       speed='100.00',
-                       heading='90.00')
-    # print(nmea_obj)
-    # print('------------')
+                       speed=100.000,
+                       heading=90.0)
+
     while True:
         a = next(nmea_obj)
         nmea_obj.position_update(datetime.datetime.utcnow())
@@ -448,55 +513,3 @@ if __name__ == "__main__":
             print(nmea)
             time.sleep(0.05)
         time.sleep(0.2)
-
-    # gpgll_sentence = Gpgll(utc_time, position)
-    # print(gpgll_sentence)
-    #
-    # # GPGSVs
-    # gpgsv_group = GpgsvGroup(16)
-    # for gpgsv in gpgsv_group.gpgsv_instances:
-    #     print(gpgsv)
-    #
-    # print(gpgsv_group)
-    #
-    # # GPGSA
-    # gpgsa_sentence = Gpgsa(gpgsv_group)
-    # print(gpgsa_sentence)
-    #
-    # # GPGGA
-    # position: dict = {
-    #     'latitude_value': '5436.70976',
-    #     'latitude_direction': 'N',
-    #     'longitude_value': '01839.98065',
-    #     'longitude_direction': 'E',
-    # }
-    # gpgga_sentence = Gpgga(gpgsa_object=gpgsa_sentence,
-    #                        utc_date_time=utc_time,
-    #                        position=position,
-    #                        altitude=21.7,
-    #                        antenna_altitude_above_msl=32.5)
-    # print(gpgga_sentence)
-    #
-    # # GPRMC
-    # gprmc_sentence = Gprmc(utc_date_time=utc_time,
-    #                        data_status='A',
-    #                        position=position,
-    #                        sog='0.019',
-    #                        cmg='0.00',
-    #                        faa_mode='A')
-    # print(gprmc_sentence)
-    #
-    # gphdt_sentence = Gphdt('274.07')
-    # print(gphdt_sentence)
-    #
-    # # GPZDA
-    # # in format '01,07,2020
-    # utc_date = datetime.datetime.utcnow().strftime('%d,%m,%Y')
-    # gpzda_sentence = Gpzda(utc_date_time=utc_time)
-    # print(gpzda_sentence)
-    #
-    # nmea_data_list = [
-    #     f'{gpzda_sentence}',
-    # ]
-    #
-    # print(nmea_data_list)

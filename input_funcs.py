@@ -1,8 +1,6 @@
 import re
 import sys
 
-##### change all functions for re.fullmatch !!!!!!!!
-
 
 def emulator_option_input():
     """
@@ -14,7 +12,7 @@ def emulator_option_input():
             print('1 - NMEA Serial')
             print('2 - NMEA Telnet Server')
             print('3 - NMEA TCP or UDP Stream')
-            print('### ctrl + c for exit ###')
+            print('### "Ctrl + c" for exit ###')
             emulator_option = input('>>> ')
             if emulator_option in ['1', '2', '3']:
                 return emulator_option
@@ -117,7 +115,7 @@ def trans_proto_input() -> str:
             sys.exit()
 
 
-def course_input() -> str:
+def course_input() -> float:
     """
     The function asks for the unit's course.
     """
@@ -126,17 +124,17 @@ def course_input() -> str:
             print('\n### Enter unit course - range 000-359 [090]: ###')
             course_data = input('>>> ')
             if course_data == '':
-                return '90.0'
+                return 90.0
             course_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
             mo = re.fullmatch(course_regex_pattern, course_data)
             if mo:
-                return f'{mo.group()}.0'
+                return float(mo.group())
         except KeyboardInterrupt:
             print('\n*** Closing the script... ***\n')
             sys.exit()
 
 
-def speed_input():
+def speed_input() -> float:
     """
     The function asks for the unit's speed.
     """
@@ -145,14 +143,14 @@ def speed_input():
             print('\n### Enter unit speed in knots - range 0-999 [10.5]: ###')
             speed_data = input('>>> ')
             if speed_data == '':
-                return '10.500'
+                return 10.500
             speed_regex_pattern = r'(\d{1,3}(\.\d)?)'
             mo = re.fullmatch(speed_regex_pattern, speed_data)
             if mo:
                 match = mo.group()
                 if match.startswith('0') and match != '0':
                     match = match.lstrip('0')
-                return f'{float(match)}00'
+                return float(match)
         except KeyboardInterrupt:
             print('\n*** Closing the script... ***\n')
             sys.exit()
@@ -168,7 +166,7 @@ def course_speed_input() -> tuple:
             course_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
             mo = re.fullmatch(course_regex_pattern, course_data)
             if mo:
-                course_new = f'{mo.group()}.0'
+                course_new = float(mo.group())
                 break
         while True:
             speed_data = input('New speed >>> ')
@@ -178,7 +176,7 @@ def course_speed_input() -> tuple:
                 match = mo.group()
                 if match.startswith('0') and match != '0':
                     match = match.lstrip('0')
-                speed_new = f'{float(match)}00'
+                speed_new = float(match)
                 break
         return course_new, speed_new
     except KeyboardInterrupt:

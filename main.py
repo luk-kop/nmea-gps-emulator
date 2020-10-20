@@ -13,7 +13,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import psutil
 
 from nmea_gps import NmeaMsg
-from input_funcs import position_input, ip_port_input, trans_proto_input, course_input, speed_input, emulator_option_input, course_speed_input
+from input_funcs import position_input, ip_port_input, trans_proto_input, course_input, speed_input, \
+    emulator_option_input, course_speed_input
 
 
 def run_telnet_job(conn, ip_add, job_id: str) -> None:
@@ -131,22 +132,13 @@ if __name__ == '__main__':
 .##..##..##...##..######..##..##..........######..##...##...####...######..##..##....##.....####...##..##.
 ..........................................................................................................
 ''')
-
-    # Altitude, Meters, above mean sea level
-    gps_altitude_amsl = '15.2'
-    # Speed in Knots
-    gps_speed = '100.035'
-    # heading/track made good in degrees
-    # Initial heading.
-    gps_heading = '45.0'
-
+    # Create APScheduler object
     scheduler = BackgroundScheduler()
 
-    # test nav_data_dictionary
-    nav_data_dict = {'gps_speed': '100.035',
-                     'init_heading': '45.0',
-                     'curr_heading': '45.0',
-                     'gps_altitude_amsl': '15.2',
+    # Dummy 'nav_data_dict'
+    nav_data_dict = {'gps_speed': 100.035,
+                     'gps_heading': 45.0,
+                     'gps_altitude_amsl': 15.2,
                      'position': {}}
 
     # Emulator option query
@@ -218,7 +210,7 @@ if __name__ == '__main__':
             nmea_obj = NmeaMsg(position=nav_data_dict['position'],
                                altitude=nav_data_dict['gps_altitude_amsl'],
                                speed=nav_data_dict['gps_speed'],
-                               heading=nav_data_dict['curr_heading'])
+                               heading=nav_data_dict['gps_heading'])
             while True:
                 nmea_list = [f'{_}' for _ in next(nmea_obj)]
                 for nmea in nmea_list:
@@ -231,13 +223,13 @@ if __name__ == '__main__':
         # Runs telnet server witch emulates NMEA device.
         # Position, initial course and speed queries
         nav_data_dict['position'] = position_input()
-        nav_data_dict['curr_heading'] = course_input()
+        nav_data_dict['gps_heading'] = course_input()
         nav_data_dict['gps_speed'] = speed_input()
         # Initialize NmeaMsg object
         nmea_obj = NmeaMsg(position=nav_data_dict['position'],
                            altitude=nav_data_dict['gps_altitude_amsl'],
                            speed=nav_data_dict['gps_speed'],
-                           heading=nav_data_dict['curr_heading'])
+                           heading=nav_data_dict['gps_heading'])
         # Local TCP server IP address and port number.
         srv_ip_address, srv_port = ip_port_input('telnet')
         nmea_thread = threading.Thread(target=run_telnet_server_thread,
@@ -249,13 +241,13 @@ if __name__ == '__main__':
         # Runs TCP or UDP NMEA stream to designated host.
         # Position, initial course and speed queries
         nav_data_dict['position'] = position_input()
-        nav_data_dict['curr_heading'] = course_input()
+        nav_data_dict['gps_heading'] = course_input()
         nav_data_dict['gps_speed'] = speed_input()
         # Initialize NmeaMsg object
         nmea_obj = NmeaMsg(position=nav_data_dict['position'],
                            altitude=nav_data_dict['gps_altitude_amsl'],
                            speed=nav_data_dict['gps_speed'],
-                           heading=nav_data_dict['curr_heading'])
+                           heading=nav_data_dict['gps_heading'])
         # IP address and port number query
         srv_ip_address, srv_port = ip_port_input('stream')
         # Transport  query
@@ -268,14 +260,18 @@ if __name__ == '__main__':
         nmea_thread.start()
 
     first_run = True
+    # Possibility of changing the unit's course and speed by the user in the main thread.
     while True:
+        if not nmea_thread.is_alive():
+            print('\n*** Closing the script... ***\n')
+            sys.exit()
         try:
             if first_run:
                 time.sleep(4)
                 first_run = False
             prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
             if prompt == '':
-                nmea_obj.speed, nmea_obj.heading = course_speed_input()
+                nmea_obj.heading_targeted, nmea_obj.speed_targeted = course_speed_input()
                 print()
         except KeyboardInterrupt:
             print('\n*** Closing the script... ***\n')
