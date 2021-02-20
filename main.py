@@ -50,7 +50,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str) -> None:
         print(f'\n*** Server listening on {srv_ip_address}:{srv_port}... ***\n')
         while True:
             # Number of allowed connections to TCP server.
-            max_sched_jobs = 1
+            max_sched_jobs = 3
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
             conn, ip_add = s.accept()
@@ -250,7 +250,7 @@ if __name__ == '__main__':
                            heading=nav_data_dict['gps_heading'])
         # IP address and port number query
         srv_ip_address, srv_port = ip_port_input('stream')
-        # Transport  query
+        # Transport query
         stream_proto = trans_proto_input()
         # run_stream_thread(srv_ip_address, srv_port, nav_data_dict, stream_proto)
         nmea_thread = threading.Thread(target=run_stream_thread,
