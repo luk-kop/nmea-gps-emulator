@@ -2,7 +2,7 @@ import re
 import sys
 
 
-def emulator_option_input():
+def emulator_option_input() -> str:
     """
     The function asks for emulator option.
     """
@@ -115,18 +115,18 @@ def trans_proto_input() -> str:
             sys.exit()
 
 
-def course_input() -> float:
+def heading_input() -> float:
     """
     The function asks for the unit's course.
     """
     while True:
         try:
             print('\n### Enter unit course - range 000-359 [090]: ###')
-            course_data = input('>>> ')
-            if course_data == '':
+            heading_data = input('>>> ')
+            if heading_data == '':
                 return 90.0
-            course_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
-            mo = re.fullmatch(course_regex_pattern, course_data)
+            heading_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
+            mo = re.fullmatch(heading_regex_pattern, heading_data)
             if mo:
                 return float(mo.group())
         except KeyboardInterrupt:
@@ -156,17 +156,17 @@ def speed_input() -> float:
             sys.exit()
 
 
-def course_speed_input() -> tuple:
+def heading_speed_input() -> tuple:
     """
-    The function asks for the unit's course and speed (online).
+    The function asks for the unit's heading and speed (online).
     """
     try:
         while True:
-            course_data = input('New course >>> ')
-            course_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
-            mo = re.fullmatch(course_regex_pattern, course_data)
+            heading_data = input('New course >>> ')
+            heading_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
+            mo = re.fullmatch(heading_regex_pattern, heading_data)
             if mo:
-                course_new = float(mo.group())
+                heading_new = float(mo.group())
                 break
         while True:
             speed_data = input('New speed >>> ')
@@ -178,7 +178,7 @@ def course_speed_input() -> tuple:
                     match = match.lstrip('0')
                 speed_new = float(match)
                 break
-        return course_new, speed_new
+        return heading_new, speed_new
     except KeyboardInterrupt:
         print('\n*** Closing the script... ***\n')
         sys.exit()

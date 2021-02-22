@@ -174,6 +174,8 @@ class NmeaMsg:
             head_current = 0
         elif head_current > 360:
             head_current -= 360
+        elif head_current < 0:
+            head_current += 360
         self.heading = round(head_current, 1)
 
     def _speed_update(self):
@@ -426,16 +428,17 @@ class Gpgsv:
         self.sats_total = sats_total
         self.sats_in_sentence = sats_in_sentence
         self.sats_ids = sats_ids
-
-    def __str__(self) -> str:
-        nmea_output = f'{self.sentence_id},{self.num_of_gsv_in_group},{self.sentence_num},' \
-                      f'{self.sats_total}'
+        self.sats_details = ''
         for satt in self.sats_ids:
             sattelite_id: str = satt
             elevation: str = f"{random.randint(0, 90):02d}"
             azimuth: str = f"{random.randint(0, 359):03d}"
             snr: str = f"{random.randint(0, 99):02d}"
-            nmea_output += f',{sattelite_id},{elevation},{azimuth},{snr}'
+            self.sats_details += f',{sattelite_id},{elevation},{azimuth},{snr}'
+
+    def __str__(self) -> str:
+        nmea_output = f'{self.sentence_id},{self.num_of_gsv_in_group},{self.sentence_num},' \
+                      f'{self.sats_total}{self.sats_details}'
         return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 

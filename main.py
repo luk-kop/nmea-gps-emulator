@@ -7,32 +7,18 @@ import threading
 import platform
 import uuid
 import os
+import logging
 
 import serial.tools.list_ports
-from apscheduler.schedulers.background import BackgroundScheduler
 import psutil
 
 from nmea_gps import NmeaMsg
-from input_funcs import position_input, ip_port_input, trans_proto_input, course_input, speed_input, \
-    emulator_option_input, course_speed_input
+from input_funcs import position_input, ip_port_input, trans_proto_input, heading_input, speed_input, \
+    emulator_option_input, heading_speed_input
+from custom_thread import NmeaSrvThread
 
 
-def run_telnet_job(conn, ip_add, job_id: str) -> None:
-    """
-    Function creates separate job for each connected client.
-    """
-    nmea_list = [f'{_}' for _ in next(nmea_obj)]
-    try:
-        for nmea in nmea_list:
-            conn.sendall(nmea.encode())
-            time.sleep(0.05)
-    except (BrokenPipeError, OSError):
-        conn.close()
-        print(f'\n*** Connection closed with {ip_add[0]}:{ip_add[1]} ***')
-        scheduler.remove_job(job_id=job_id)
-
-
-def run_telnet_server_thread(srv_ip_address: str, srv_port: str) -> None:
+def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> None:
     """
     Function starts thread with TCP (telnet) server sending NMEA data to connected client (clients).
     """
@@ -50,24 +36,25 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str) -> None:
         print(f'\n*** Server listening on {srv_ip_address}:{srv_port}... ***\n')
         while True:
             # Number of allowed connections to TCP server.
-            max_sched_jobs = 3
+            max_threads = 3
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
             conn, ip_add = s.accept()
-            print(f'\n*** Connected with {ip_add[0]}:{ip_add[1]} ***')
-            if len(scheduler.get_jobs()) < max_sched_jobs:
-                job_id = uuid.uuid4().hex
-                scheduler.add_job(func=run_telnet_job,
-                                  kwargs={'conn': conn, 'ip_add': ip_add, 'job_id': job_id},
-                                  trigger='interval',
-                                  seconds=1,
-                                  id=job_id)
-                if not scheduler.running:
-                    scheduler.start()
+            # print(f'\n*** Connected with {ip_add[0]}:{ip_add[1]} ***')
+            logging.info(f'Connected with {ip_add[0]}:{ip_add[1]}')
+            thread_list = [thread.name for thread in threading.enumerate()]
+            if len([thread_name for thread_name in thread_list if thread_name.startswith('nmea_srv')]) < max_threads:
+                nmea_srv_thread = NmeaSrvThread(name=f'nmea_srv{uuid.uuid4().hex}',
+                                                daemon=True,
+                                                conn=conn,
+                                                ip_add=ip_add,
+                                                nmea_object=nmea_obj)
+                nmea_srv_thread.start()
             else:
                 # Close connection if number of scheduler jobs > max_sched_jobs
                 conn.close()
-                print(f'\n*** Connection closed with {ip_add[0]}:{ip_add[1]} ***')
+                # print(f'\n*** Connection closed with {ip_add[0]}:{ip_add[1]} ***')
+                logging.info(f'Connection closed with {ip_add[0]}:{ip_add[1]}')
 
 
 def run_stream_thread(srv_ip_address: str, srv_port: str, stream_proto: str) -> None:
@@ -132,19 +119,31 @@ if __name__ == '__main__':
 .##..##..##...##..######..##..##..........######..##...##...####...######..##..##....##.....####...##..##.
 ..........................................................................................................
 ''')
-    # Create APScheduler object
-    scheduler = BackgroundScheduler()
-
     # Dummy 'nav_data_dict'
-    nav_data_dict = {'gps_speed': 100.035,
+    nav_data_dict = {'gps_speed': 10.035,
                      'gps_heading': 45.0,
                      'gps_altitude_amsl': 15.2,
                      'position': {}}
 
     # Emulator option query
     emulator_option = emulator_option_input()
+    # Position, initial course and speed queries
+    nav_data_dict['position'] = position_input()
+    nav_data_dict['gps_heading'] = heading_input()
+    nav_data_dict['gps_speed'] = speed_input()
+
+    # Initialize NmeaMsg object
+    nmea_obj = NmeaMsg(position=nav_data_dict['position'],
+                       altitude=nav_data_dict['gps_altitude_amsl'],
+                       speed=nav_data_dict['gps_speed'],
+                       heading=nav_data_dict['gps_heading'])
+
+    # Logging config
+    log_format = '%(asctime)s: %(message)s'
+    logging.basicConfig(format=log_format, level=logging.INFO, datefmt='%H:%M:%S')
 
     if emulator_option == '1':
+        # TODO: update to new version
         # Runs serial which emulates NMEA server-device
         # serial_port = '/dev/ttyUSB0'
 
@@ -217,37 +216,20 @@ if __name__ == '__main__':
                     ser.write(str.encode(nmea))
                     time.sleep(0.1)
                 time.sleep(0.5)
-        # nmea_thread
 
     elif emulator_option == '2':
         # Runs telnet server witch emulates NMEA device.
-        # Position, initial course and speed queries
-        nav_data_dict['position'] = position_input()
-        nav_data_dict['gps_heading'] = course_input()
-        nav_data_dict['gps_speed'] = speed_input()
-        # Initialize NmeaMsg object
-        nmea_obj = NmeaMsg(position=nav_data_dict['position'],
-                           altitude=nav_data_dict['gps_altitude_amsl'],
-                           speed=nav_data_dict['gps_speed'],
-                           heading=nav_data_dict['gps_heading'])
+
         # Local TCP server IP address and port number.
         srv_ip_address, srv_port = ip_port_input('telnet')
         nmea_thread = threading.Thread(target=run_telnet_server_thread,
-                                       args=[srv_ip_address, srv_port],
+                                       args=[srv_ip_address, srv_port, nmea_obj],
                                        daemon=True,
                                        name='nmea_thread')
         nmea_thread.start()
     elif emulator_option == '3':
         # Runs TCP or UDP NMEA stream to designated host.
-        # Position, initial course and speed queries
-        nav_data_dict['position'] = position_input()
-        nav_data_dict['gps_heading'] = course_input()
-        nav_data_dict['gps_speed'] = speed_input()
-        # Initialize NmeaMsg object
-        nmea_obj = NmeaMsg(position=nav_data_dict['position'],
-                           altitude=nav_data_dict['gps_altitude_amsl'],
-                           speed=nav_data_dict['gps_speed'],
-                           heading=nav_data_dict['gps_heading'])
+
         # IP address and port number query
         srv_ip_address, srv_port = ip_port_input('stream')
         # Transport query
@@ -267,11 +249,22 @@ if __name__ == '__main__':
             sys.exit()
         try:
             if first_run:
-                time.sleep(4)
+                time.sleep(2)
                 first_run = False
             prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
             if prompt == '':
-                nmea_obj.heading_targeted, nmea_obj.speed_targeted = course_speed_input()
+                new_head, new_speed = heading_speed_input()
+                # Get all 'nmea_srv*' telnet server threads
+                thread_list = [thread for thread in threading.enumerate() if thread.name.startswith('nmea_srv')]
+                if thread_list:
+                    for thr in thread_list:
+                        # Update speed and heading
+                        thr.set_heading(new_head)
+                        thr.set_speed(new_speed)
+                else:
+                    # Set targeted head and speed without connected clients
+                    nmea_obj.heading_targeted = new_head
+                    nmea_obj.speed_targeted = new_speed
                 print()
         except KeyboardInterrupt:
             print('\n*** Closing the script... ***\n')
