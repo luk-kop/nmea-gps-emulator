@@ -6,16 +6,14 @@ import sys
 import threading
 import platform
 import uuid
-import os
 import logging
 
 import serial.tools.list_ports
-import psutil
 
 from nmea_gps import NmeaMsg
-from input_funcs import position_input, ip_port_input, trans_proto_input, heading_input, speed_input, \
-    emulator_option_input, heading_speed_input
-from custom_thread import NmeaSrvThread
+from auxiliary_funcs import position_input, ip_port_input, trans_proto_input, heading_input, speed_input, \
+    emulator_option_input, heading_speed_input, exit_script
+from custom_thread import NmeaSrvThread, NmeaStreamThread
 
 
 def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> None:
@@ -36,7 +34,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> No
         print(f'\n*** Server listening on {srv_ip_address}:{srv_port}... ***\n')
         while True:
             # Number of allowed connections to TCP server.
-            max_threads = 3
+            max_threads = 5
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
             conn, ip_add = s.accept()
@@ -57,58 +55,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> No
                 logging.info(f'Connection closed with {ip_add[0]}:{ip_add[1]}')
 
 
-def run_stream_thread(srv_ip_address: str, srv_port: str, stream_proto: str) -> None:
-    """
-    Function runs thread with NMEA stream - TCP or UDP.
-    """
-    if stream_proto == 'tcp':
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((srv_ip_address, srv_port))
-                print(f'\n*** Sending NMEA data - TCP stream to {srv_ip_address}:{srv_port}... ***\n')
-                while True:
-                    timer_start = time.perf_counter()
-                    nmea_list = [f'{_}' for _ in next(nmea_obj)]
-                    for nmea in nmea_list:
-                        s.send(nmea.encode())
-                        time.sleep(0.05)
-                    # Start next loop after 1 sec
-                    time.sleep(1 - (time.perf_counter() - timer_start))
-        except (OSError, TimeoutError, ConnectionRefusedError, BrokenPipeError) as err:
-            print(f'\n*** Error: {err.strerror} ***\n')
-            exit_script()
-            # sys.exit()
-    elif stream_proto == 'udp':
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            print(f'\n*** Sending NMEA data - UDP stream to {srv_ip_address}:{srv_port}... ***\n')
-            while True:
-                timer_start = time.perf_counter()
-                nmea_list = [f'{_}' for _ in next(nmea_obj)]
-                for nmea in nmea_list:
-                    try:
-                        s.sendto(nmea.encode(), (srv_ip_address, srv_port))
-                        time.sleep(0.05)
-                    except OSError as err:
-                        print(f'*** Error: {err.strerror} ***')
-                        exit_script()
-                        # sys.exit()
-                # Start next loop after 1 sec
-                time.sleep(1 - (time.perf_counter() - timer_start))
-
-
-def exit_script():
-    """
-    The function enables to terminate the script (main thread) from the inside of child thread.
-    """
-    current_script_pid = os.getpid()
-    current_script = psutil.Process(current_script_pid)
-    print('*** Closing the script... ***\n')
-    time.sleep(1)
-    current_script.terminate()
-
 # TODO:     Add try-except when serial port is busy
-
-
 if __name__ == '__main__':
     print(r'''
 
@@ -123,7 +70,8 @@ if __name__ == '__main__':
     nav_data_dict = {'gps_speed': 10.035,
                      'gps_heading': 45.0,
                      'gps_altitude_amsl': 15.2,
-                     'position': {}}
+                     'position': {}
+                     }
 
     # Emulator option query
     emulator_option = emulator_option_input()
@@ -219,7 +167,6 @@ if __name__ == '__main__':
 
     elif emulator_option == '2':
         # Runs telnet server witch emulates NMEA device.
-
         # Local TCP server IP address and port number.
         srv_ip_address, srv_port = ip_port_input('telnet')
         nmea_thread = threading.Thread(target=run_telnet_server_thread,
@@ -229,20 +176,27 @@ if __name__ == '__main__':
         nmea_thread.start()
     elif emulator_option == '3':
         # Runs TCP or UDP NMEA stream to designated host.
-
         # IP address and port number query
-        srv_ip_address, srv_port = ip_port_input('stream')
+        ip_add, port = ip_port_input('stream')
         # Transport query
         stream_proto = trans_proto_input()
-        # run_stream_thread(srv_ip_address, srv_port, nav_data_dict, stream_proto)
-        nmea_thread = threading.Thread(target=run_stream_thread,
-                                       args=[srv_ip_address, srv_port, stream_proto],
+        nmea_thread = NmeaStreamThread(name=f'nmea_srv{uuid.uuid4().hex}',
                                        daemon=True,
-                                       name='nmea_thread')
+                                       ip_add=ip_add,
+                                       port=port,
+                                       proto=stream_proto,
+                                       nmea_object=nmea_obj)
         nmea_thread.start()
 
+
+        # nmea_thread = threading.Thread(target=run_stream_thread,
+        #                                args=[srv_ip_address, srv_port, stream_proto],
+        #                                daemon=True,
+        #                                name='nmea_thread')
+        # nmea_thread.start()
+
     first_run = True
-    # Possibility of changing the unit's course and speed by the user in the main thread.
+    # Changing the unit's course and speed by the user in the main thread.
     while True:
         if not nmea_thread.is_alive():
             print('\n*** Closing the script... ***\n')
@@ -259,8 +213,10 @@ if __name__ == '__main__':
                 if thread_list:
                     for thr in thread_list:
                         # Update speed and heading
+                        # a = time.time()
                         thr.set_heading(new_head)
                         thr.set_speed(new_speed)
+                        # print(time.time() - a)
                 else:
                     # Set targeted head and speed without connected clients
                     nmea_obj.heading_targeted = new_head

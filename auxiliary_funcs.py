@@ -1,5 +1,9 @@
 import re
 import sys
+import os
+import time
+
+import psutil
 
 
 def emulator_option_input() -> str:
@@ -183,5 +187,15 @@ def heading_speed_input() -> tuple:
         print('\n*** Closing the script... ***\n')
         sys.exit()
 
+
+def exit_script():
+    """
+    The function enables to terminate the script (main thread) from the inside of child thread.
+    """
+    current_script_pid = os.getpid()
+    current_script = psutil.Process(current_script_pid)
+    print('*** Closing the script... ***\n')
+    time.sleep(1)
+    current_script.terminate()
 
 
