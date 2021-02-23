@@ -2,9 +2,10 @@ import re
 import sys
 import os
 import time
+import platform
 
 import psutil
-
+import serial.tools.list_ports
 
 def emulator_option_input() -> str:
     """
@@ -186,6 +187,58 @@ def heading_speed_input() -> tuple:
     except KeyboardInterrupt:
         print('\n*** Closing the script... ***\n')
         sys.exit()
+
+
+def serial_config_input() -> dict:
+    """
+    The function asks for serial configuration.
+    """
+    # serial_port = '/dev/ttyUSB0'
+    # Dict with all serial port settings.
+    serial_set = {'bytesize': 8,
+                  'parity': 'N',
+                  'stopbits': 1,
+                  'timeout': 1}
+
+    # List of available serial ports.
+    ports_connected = serial.tools.list_ports.comports(include_links=False)
+    # List of available serial port's names.
+    ports_connected_names = [port.device for port in ports_connected]
+    print('\n### Connected Serial Ports: ###')
+    for port in sorted(ports_connected):
+        print(f'   - {port}')
+    # Check OS platform.
+    platform_os = platform.system()
+    # Asks for serial port name and checks the name validity.
+    while True:
+        if platform_os.lower() == 'linux':
+            print('\n### Choose Serial Port [/dev/ttyUSB0]: ###')
+            serial_set['port'] = input('>>> ')
+            if serial_set['port'] == '':
+                serial_set['port'] = '/dev/ttyUSB0'
+            if serial_set['port'] in ports_connected_names:
+                break
+        elif platform_os.lower() == 'windows':
+            print('\n### Choose Serial Port [COM1]: ###')
+            serial_set['port'] = input('>>> ')
+            if serial_set['port'] == '':
+                serial_set['port'] = 'COM1'
+            if serial_set['port'] in ports_connected_names:
+                break
+        print(f'\nError: \'{serial_set["port"]}\' is wrong port\'s name.')
+
+    # Serial port settings:
+    baudrate_list = ['300', '600', '1200', '2400', '4800', '9600', '14400',
+                     '19200', '38400', '57600', '115200', '128000']
+    while True:
+        print('\n### Enter serial baudrate [9600]: ###')
+        serial_set['baudrate'] = input('>>> ')
+        if serial_set['baudrate'] == '':
+            serial_set['baudrate'] = 9600
+        if str(serial_set['baudrate']) in baudrate_list:
+            break
+        print(f'\n*** Error: \'{serial_set["baudrate"]}\' is wrong port\'s baudrate. ***')
+    return serial_set
 
 
 def exit_script():

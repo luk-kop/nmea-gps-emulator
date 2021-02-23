@@ -2,14 +2,18 @@ import logging
 import threading
 import time
 import socket
+import re
+
+import serial.tools.list_ports
 
 from auxiliary_funcs import exit_script
+
 
 class NmeaSrvThread(threading.Thread):
     """
     A class that represents a thread dedicated for TCP (telnet) server-client connection.
     """
-    def __init__(self, ip_add, nmea_object, conn=None, *args, **kwargs):
+    def __init__(self, nmea_object, ip_add=None, conn=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.heading = None
         self.speed = None
@@ -119,4 +123,44 @@ class NmeaStreamThread(NmeaSrvThread):
                     time.sleep(1 - (time.perf_counter() - timer_start))
 
 
+class NmeaSerialThread(NmeaSrvThread):
+    """
+    A class that represents a thread dedicated for serial connection.
+    """
+    def __init__(self, serial_config, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.serial_config = serial_config
 
+    def run(self):
+        # TODO: add try-except when serial port is busy
+        # Open serial port.
+        try:
+            with serial.Serial(self.serial_config['port'], baudrate=self.serial_config['baudrate'],
+                               bytesize=self.serial_config['bytesize'],
+                               parity=self.serial_config['parity'],
+                               stopbits=self.serial_config['stopbits'],
+                               timeout=self.serial_config['timeout']) as ser:
+                print(
+                    f'Serial port settings: {self.serial_config["port"]} {self.serial_config["baudrate"]} '
+                    f'{self.serial_config["bytesize"]}{self.serial_config["parity"]}{self.serial_config["stopbits"]}')
+                print('Sending NMEA data...')
+                while True:
+                    timer_start = time.perf_counter()
+                    with self._lock:
+                        # Nmea object speed and heading update
+                        if self.heading and self.heading != self._heading_cache:
+                            self.nmea_object.heading_targeted = self.heading
+                            self._heading_cache = self.heading
+                        if self.speed and self.speed != self._speed_cache:
+                            self.nmea_object.speed_targeted = self.speed
+                            self._speed_cache = self.speed
+                        nmea_list = [f'{_}' for _ in next(self.nmea_object)]
+                        for nmea in nmea_list:
+                            ser.write(str.encode(nmea))
+                            time.sleep(0.05)
+                    time.sleep(1 - (time.perf_counter() - timer_start))
+        except serial.serialutil.SerialException as error:
+            # Remove error number from output [...]
+            error_formatted = re.sub(r'\[(.*?)\]', '', str(error)).strip().replace('  ', ' ').capitalize()
+            logging.error(f"{error_formatted}. Please try \'sudo chmod a+rw {self.serial_config['port']}\'")
+            exit_script()

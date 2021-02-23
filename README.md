@@ -2,6 +2,9 @@
 
 
 
+serial - null modem cable
+sudo chmod a+rw /dev/ttyUSB0
+
 Installation with venv
 The application can be build and run locally with virtualenv tool. Run following commands in order to create virtual environment and install the required packages.
 ```bash

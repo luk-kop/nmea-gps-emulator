@@ -4,16 +4,14 @@ import time
 import socket
 import sys
 import threading
-import platform
 import uuid
 import logging
 
-import serial.tools.list_ports
 
 from nmea_gps import NmeaMsg
 from auxiliary_funcs import position_input, ip_port_input, trans_proto_input, heading_input, speed_input, \
-    emulator_option_input, heading_speed_input, exit_script
-from custom_thread import NmeaSrvThread, NmeaStreamThread
+    emulator_option_input, heading_speed_input, exit_script, serial_config_input
+from custom_thread import NmeaSrvThread, NmeaStreamThread, NmeaSerialThread
 
 
 def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> None:
@@ -91,79 +89,15 @@ if __name__ == '__main__':
     logging.basicConfig(format=log_format, level=logging.INFO, datefmt='%H:%M:%S')
 
     if emulator_option == '1':
-        # TODO: update to new version
         # Runs serial which emulates NMEA server-device
         # serial_port = '/dev/ttyUSB0'
-
-        # Dict with all serial port settings.
-        serial_set = {'bytesize': 8,
-                      'parity': 'N',
-                      'stopbits': 1,
-                      'timeout': 1}
-
-        # Lista of available serial ports.
-        ports_connected = serial.tools.list_ports.comports(include_links=False)
-        # List of available serial port's names.
-        ports_connected_names = [port.device for port in ports_connected]
-        print('\n### Connected Serial Ports: ###')
-        for port in sorted(ports_connected):
-            print(f'   - {port}')
-        # Check OS platform.
-        platform_os = platform.system()
-        # Asks for serial port name and checks the name validity.
-        while True:
-            if platform_os.lower() == 'linux':
-                print('\n### Choose Serial Port [/dev/ttyUSB0]: ###')
-                serial_set['port'] = input('>>> ')
-                if serial_set['port'] == '':
-                    serial_set['port'] = '/dev/ttyUSB0'
-                if serial_set['port'] in ports_connected_names:
-                    break
-            elif platform_os.lower() == 'windows':
-                print('\n### Choose Serial Port [COM1]: ###')
-                serial_set['port'] = input('>>> ')
-                if serial_set['port'] == '':
-                    serial_set['port'] = 'COM1'
-                if serial_set['port'] in ports_connected_names:
-                    break
-            print(f'\nError: \'{serial_set["port"]}\' is wrong port\'s name.')
-
-        # Serial port settings:
-        baudrate_list = ['300', '600', '1200', '2400', '4800', '9600', '14400',
-                         '19200', '38400', '57600', '115200', '128000']
-        while True:
-            print('\n### Enter serial baudrate [9600]: ###')
-            serial_set['baudrate'] = input('>>> ')
-            if serial_set['baudrate'] == '':
-                serial_set['baudrate'] = 9600
-            if str(serial_set['baudrate']) in baudrate_list:
-                break
-            print(f'\n*** Error: \'{serial_set["baudrate"]}\' is wrong port\'s baudrate. ***')
-
-        # Ask for position:
-        nav_data_dict['position'] = position_input()
-
-        # Open serial port.
-        # TODO: add try-except when serial port is busy
-        with serial.Serial(serial_set['port'], baudrate=serial_set['baudrate'],
-                           bytesize=serial_set['bytesize'],
-                           parity=serial_set['parity'],
-                           stopbits=serial_set['stopbits'],
-                           timeout=serial_set['timeout']) as ser:
-            print(
-                f'Serial port settings: {serial_set["port"]} {serial_set["baudrate"]} {serial_set["bytesize"]}{serial_set["parity"]}{serial_set["stopbits"]}')
-            print('Sending NMEA data...')
-            # Initialize NmeaMsg object
-            nmea_obj = NmeaMsg(position=nav_data_dict['position'],
-                               altitude=nav_data_dict['gps_altitude_amsl'],
-                               speed=nav_data_dict['gps_speed'],
-                               heading=nav_data_dict['gps_heading'])
-            while True:
-                nmea_list = [f'{_}' for _ in next(nmea_obj)]
-                for nmea in nmea_list:
-                    ser.write(str.encode(nmea))
-                    time.sleep(0.1)
-                time.sleep(0.5)
+        # Serial configuration query
+        serial_config = serial_config_input()
+        nmea_thread = NmeaSerialThread(name=f'nmea_srv{uuid.uuid4().hex}',
+                                       daemon=True,
+                                       serial_config=serial_config,
+                                       nmea_object=nmea_obj)
+        nmea_thread.start()
 
     elif emulator_option == '2':
         # Runs telnet server witch emulates NMEA device.
@@ -178,7 +112,7 @@ if __name__ == '__main__':
         # Runs TCP or UDP NMEA stream to designated host.
         # IP address and port number query
         ip_add, port = ip_port_input('stream')
-        # Transport query
+        # Transport protocol query.
         stream_proto = trans_proto_input()
         nmea_thread = NmeaStreamThread(name=f'nmea_srv{uuid.uuid4().hex}',
                                        daemon=True,
@@ -188,15 +122,8 @@ if __name__ == '__main__':
                                        nmea_object=nmea_obj)
         nmea_thread.start()
 
-
-        # nmea_thread = threading.Thread(target=run_stream_thread,
-        #                                args=[srv_ip_address, srv_port, stream_proto],
-        #                                daemon=True,
-        #                                name='nmea_thread')
-        # nmea_thread.start()
-
-    first_run = True
     # Changing the unit's course and speed by the user in the main thread.
+    first_run = True
     while True:
         if not nmea_thread.is_alive():
             print('\n*** Closing the script... ***\n')
