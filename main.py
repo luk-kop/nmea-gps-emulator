@@ -53,7 +53,6 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> No
                 logging.info(f'Connection closed with {ip_add[0]}:{ip_add[1]}')
 
 
-# TODO:     Add try-except when serial port is busy
 if __name__ == '__main__':
     print(r'''
 
@@ -105,7 +104,7 @@ if __name__ == '__main__':
         srv_ip_address, srv_port = ip_port_input('telnet')
         nmea_thread = threading.Thread(target=run_telnet_server_thread,
                                        args=[srv_ip_address, srv_port, nmea_obj],
-                                       daemon=True,
+                                       daemon = True,
                                        name='nmea_thread')
         nmea_thread.start()
     elif emulator_option == '3':

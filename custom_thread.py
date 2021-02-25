@@ -3,6 +3,7 @@ import threading
 import time
 import socket
 import re
+import sys
 
 import serial.tools.list_ports
 
@@ -60,7 +61,7 @@ class NmeaSrvThread(threading.Thread):
                     # print(f'\n*** Connection closed with {self.ip_add[0]}:{self.ip_add[1]} ***')
                     logging.info(f'Connection closed with {self.ip_add[0]}:{self.ip_add[1]}')
                     # Close thread
-                    exit_script()
+                    sys.exit()
             time.sleep(1 - (time.perf_counter() - timer_start))
 
 
