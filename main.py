@@ -32,7 +32,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> No
         print(f'\n*** Server listening on {srv_ip_address}:{srv_port}... ***\n')
         while True:
             # Number of allowed connections to TCP server.
-            max_threads = 5
+            max_threads = 10
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
             conn, ip_add = s.accept()

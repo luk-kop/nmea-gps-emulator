@@ -7,6 +7,7 @@ import platform
 import psutil
 import serial.tools.list_ports
 
+
 def emulator_option_input() -> str:
     """
     The function asks for emulator option.
@@ -15,7 +16,7 @@ def emulator_option_input() -> str:
         try:
             print('\n### Choose emulator option: ###')
             print('1 - NMEA Serial')
-            print('2 - NMEA Telnet Server')
+            print('2 - NMEA TCP Server')
             print('3 - NMEA TCP or UDP Stream')
             print('### "Ctrl + c" for exit ###')
             emulator_option = input('>>> ')

@@ -132,7 +132,6 @@ class NmeaSerialThread(NmeaSrvThread):
         self.serial_config = serial_config
 
     def run(self):
-        # TODO: add try-except when serial port is busy
         # Open serial port.
         try:
             with serial.Serial(self.serial_config['port'], baudrate=self.serial_config['baudrate'],
