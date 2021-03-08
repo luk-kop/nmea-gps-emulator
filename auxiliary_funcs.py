@@ -8,23 +8,15 @@ import psutil
 import serial.tools.list_ports
 
 
-def emulator_option_input() -> str:
+def exit_script():
     """
-    The function asks for emulator option.
+    The function enables to terminate the script (main thread) from the inside of child thread.
     """
-    while True:
-        try:
-            print('\n### Choose emulator option: ###')
-            print('1 - NMEA Serial')
-            print('2 - NMEA TCP Server')
-            print('3 - NMEA TCP or UDP Stream')
-            print('### "Ctrl + c" for exit ###')
-            emulator_option = input('>>> ')
-            if emulator_option in ['1', '2', '3']:
-                return emulator_option
-        except KeyboardInterrupt:
-            print('\n*** Closing the script... ***\n')
-            sys.exit()
+    current_script_pid = os.getpid()
+    current_script = psutil.Process(current_script_pid)
+    print('*** Closing the script... ***\n')
+    time.sleep(1)
+    current_script.terminate()
 
 
 def position_input() -> dict:
@@ -241,15 +233,5 @@ def serial_config_input() -> dict:
         print(f'\n*** Error: \'{serial_set["baudrate"]}\' is wrong port\'s baudrate. ***')
     return serial_set
 
-
-def exit_script():
-    """
-    The function enables to terminate the script (main thread) from the inside of child thread.
-    """
-    current_script_pid = os.getpid()
-    current_script = psutil.Process(current_script_pid)
-    print('*** Closing the script... ***\n')
-    time.sleep(1)
-    current_script.terminate()
 
 

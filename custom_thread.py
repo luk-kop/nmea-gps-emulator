@@ -4,10 +4,50 @@ import time
 import socket
 import re
 import sys
+import uuid
 
 import serial.tools.list_ports
 
 from auxiliary_funcs import exit_script
+
+
+def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> None:
+    """
+    Function starts thread with TCP (telnet) server sending NMEA data to connected client (clients).
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        # Bind socket to local host and port.
+        try:
+            s.bind((srv_ip_address, srv_port))
+        except socket.error as err:
+            print(f'\n*** Bind failed. Error: {err.strerror}. ***')
+            print('Change IP/port settings or try again in next 2 minutes.')
+            exit_script()
+            # sys.exit()
+        # Start listening on socket
+        s.listen(10)
+        print(f'\n*** Server listening on {srv_ip_address}:{srv_port}... ***\n')
+        while True:
+            # Number of allowed connections to TCP server.
+            max_threads = 10
+            # Scripts waiting for client calls
+            # The server is blocked (suspended) and is waiting for a client connection.
+            conn, ip_add = s.accept()
+            # print(f'\n*** Connected with {ip_add[0]}:{ip_add[1]} ***')
+            logging.info(f'Connected with {ip_add[0]}:{ip_add[1]}')
+            thread_list = [thread.name for thread in threading.enumerate()]
+            if len([thread_name for thread_name in thread_list if thread_name.startswith('nmea_srv')]) < max_threads:
+                nmea_srv_thread = NmeaSrvThread(name=f'nmea_srv{uuid.uuid4().hex}',
+                                                daemon=True,
+                                                conn=conn,
+                                                ip_add=ip_add,
+                                                nmea_object=nmea_obj)
+                nmea_srv_thread.start()
+            else:
+                # Close connection if number of scheduler jobs > max_sched_jobs
+                conn.close()
+                # print(f'\n*** Connection closed with {ip_add[0]}:{ip_add[1]} ***')
+                logging.info(f'Connection closed with {ip_add[0]}:{ip_add[1]}')
 
 
 class NmeaSrvThread(threading.Thread):
