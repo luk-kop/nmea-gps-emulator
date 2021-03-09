@@ -133,11 +133,11 @@ class Menu:
         # Transport protocol query.
         stream_proto = trans_proto_input()
         self.nmea_thread = NmeaStreamThread(name=f'nmea_srv{uuid.uuid4().hex}',
-                                       daemon=True,
-                                       ip_add=ip_add,
-                                       port=port,
-                                       proto=stream_proto,
-                                       nmea_object=self.nmea_obj)
+                                            daemon=True,
+                                            ip_add=ip_add,
+                                            port=port,
+                                            proto=stream_proto,
+                                            nmea_object=self.nmea_obj)
         self.nmea_thread.start()
 
     def quit(self):

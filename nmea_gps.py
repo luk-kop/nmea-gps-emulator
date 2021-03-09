@@ -23,7 +23,7 @@ class NmeaMsg:
         # NMEA sentences initialization
         self.gpgsv_group = GpgsvGroup(sats_total=15)
         self.gpgsa = Gpgsa(gpgsv_group=self.gpgsv_group)
-        self.gga = Gpgga(gpgsa_object=self.gpgsa,
+        self.gga = Gpgga(sats_count=self.gpgsa.sats_count,
                          utc_date_time=self.utc_date_time,
                          position=position,
                          altitude=altitude,
@@ -222,22 +222,17 @@ class Gpgga:
     """
     sentence_id: str = 'GPGGA'
 
-    def __init__(self, gpgsa_object, utc_date_time, position, altitude, antenna_altitude_above_msl, fix_quality=1,
+    def __init__(self, sats_count, utc_date_time, position, altitude, antenna_altitude_above_msl=32.5, fix_quality=1,
                  hdop=0.92, dgps_last_update='', dgps_ref_station_id=''):
-        self.gpgsa_object = gpgsa_object
+        self.sats_count = sats_count
         self.utc_time = utc_date_time
         self.position = position
         self.fix_quality = fix_quality
-        # self.num_of_satellites = num_of_sats
         self.hdop = hdop
         self.altitude = altitude
         self.antenna_altitude_above_msl = antenna_altitude_above_msl
         self.dgps_last_update = dgps_last_update
         self.dgps_ref_station_id = dgps_ref_station_id
-
-    @property
-    def num_of_sats(self) -> int:
-        return len(self.gpgsa_object.sats_ids)
 
     @property
     def utc_time(self) -> str:
@@ -251,7 +246,7 @@ class Gpgga:
         nmea_output = f'{self.sentence_id},{self.utc_time}.00,{self.position["latitude_value"]},' \
                       f'{self.position["latitude_direction"]},{self.position["longitude_value"]},' \
                       f'{self.position["longitude_direction"]},{self.fix_quality},' \
-                      f'{self.num_of_sats:02d},{self.hdop},{self.altitude},M,' \
+                      f'{self.sats_count:02d},{self.hdop},{self.altitude},M,' \
                       f'{self.antenna_altitude_above_msl},M,{self.dgps_last_update},' \
                       f'{self.dgps_ref_station_id}'
         return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
@@ -359,6 +354,10 @@ class Gpgsa:
     @sats_ids.setter
     def sats_ids(self, value) -> None:
         self._sats_ids = random.sample(value, k=random.randint(4, 12))
+
+    @property
+    def sats_count(self) -> int:
+        return len(self.sats_ids)
 
     def __str__(self) -> str:
         # IDs of satt used in position fix (12 fields), if less than 12 sats, fill fields with ''
