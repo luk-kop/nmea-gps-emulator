@@ -1,7 +1,6 @@
 import random
 from math import ceil
 import datetime
-import time
 
 from pyproj import Geod
 
@@ -20,8 +19,8 @@ class NmeaMsg:
         self.heading = heading
         # The unit's heading provided by the user during the operation of the script
         self.heading_targeted = heading
-        # NMEA sentences initialization
-        self.gpgsv_group = GpgsvGroup(sats_total=15)
+        # NMEA sentences initialization - by default with 15 sats
+        self.gpgsv_group = GpgsvGroup()
         self.gpgsa = Gpgsa(gpgsv_group=self.gpgsv_group)
         self.gga = Gpgga(sats_count=self.gpgsa.sats_count,
                          utc_date_time=self.utc_date_time,
@@ -56,12 +55,10 @@ class NmeaMsg:
         self.gga.utc_time = self.utc_date_time
         self.gpgll.utc_time = self.utc_date_time
         self.gprmc.utc_time = self.utc_date_time
-        self.gprmc.utc_time = self.utc_date_time
         self.gprmc.sog = self.speed
         self.gprmc.cmg = self.heading
         self.gphdt.heading = self.heading
         self.gpzda.utc_time = self.utc_date_time
-        # raise StopIteration
         return self.nmea_sentences
 
     def __iter__(self):
@@ -99,7 +96,7 @@ class NmeaMsg:
             lon_start = - float(lon_a[:3]) - (float(lon_a[3:]) / 60)
         # Use WGS84 ellipsoid.
         g = Geod(ellps='WGS84')
-        # forward transformation - returns longitude, latitude, back azimuth of terminus points
+        # Forward transformation - returns longitude, latitude, back azimuth of terminus points
         lon_end, lat_end, back_azimuth = g.fwd(lon_start, lat_start, self.heading, distance)
         # Change direction when cross the equator or prime meridian (Greenwich)
         if lat_end >= 0:
@@ -295,7 +292,6 @@ class Gprmc:
         # UTC time in format: 211250
         self.utc_time = utc_date_time
         # UTC date in format: 130720
-        # self.utc_date = utc_date_time
         self.data_status = data_status
         self.position = position
         # Speed Over Ground
@@ -339,6 +335,7 @@ class Gpgsa:
     Example: $GPGSA,A,3,19,28,14,18,27,22,31,39,,,,,1.7,1.0,1.3*35
     """
     sentence_id: str = 'GPGSA'
+
     def __init__(self, gpgsv_group, select_mode='A', mode=3, pdop=1.56, hdop=0.92, vdop=1.25):
         self.select_mode = select_mode
         self.mode = mode
@@ -360,7 +357,7 @@ class Gpgsa:
         return len(self.sats_ids)
 
     def __str__(self) -> str:
-        # IDs of satt used in position fix (12 fields), if less than 12 sats, fill fields with ''
+        # IDs of sat used in position fix (12 fields), if less than 12 sats, fill fields with ''
         sats_ids_output = self.sats_ids[:]
         while len(sats_ids_output) < 12:
             sats_ids_output.append('')
@@ -376,11 +373,11 @@ class GpgsvGroup:
     """
     sats_in_sentence = 4
 
-    def __init__(self, sats_total):
+    def __init__(self, sats_total=15):
         self.gpgsv_instances = []
         self.sats_total = sats_total
         self.num_of_gsv_in_group = ceil(self.sats_total / self.sats_in_sentence)
-        # List of sattelites ids for all GPGSV sentences
+        # List of satellites ids for all GPGSV sentences
         self.sats_ids = random.sample([f'{_:02d}' for _ in range(1,33)], k=self.sats_total)
         # Iterator for sentence sats IDs
         sats_ids_iter = iter(self.sats_ids)
@@ -428,12 +425,12 @@ class Gpgsv:
         self.sats_in_sentence = sats_in_sentence
         self.sats_ids = sats_ids
         self.sats_details = ''
-        for satt in self.sats_ids:
-            sattelite_id: str = satt
-            elevation: str = f"{random.randint(0, 90):02d}"
-            azimuth: str = f"{random.randint(0, 359):03d}"
-            snr: str = f"{random.randint(0, 99):02d}"
-            self.sats_details += f',{sattelite_id},{elevation},{azimuth},{snr}'
+        for sat in self.sats_ids:
+            satellite_id: str = sat
+            elevation: int = random.randint(0, 90)
+            azimuth: int = random.randint(0, 359)
+            snr: int = random.randint(0, 99)
+            self.sats_details += f',{satellite_id},{elevation:02d},{azimuth:03d},{snr:02d}'
 
     def __str__(self) -> str:
         nmea_output = f'{self.sentence_id},{self.num_of_gsv_in_group},{self.sentence_num},' \
@@ -467,8 +464,6 @@ class Gpzda:
     def __init__(self, utc_date_time):
         # UTC time in format: 211250
         self.utc_time = utc_date_time
-        # UTC date in format: 13,07,2020 (for GPZDA)
-        # self.utc_date = utc_date_time
 
     @property
     def utc_time(self) -> str:
@@ -492,26 +487,3 @@ class Gpzda:
         nmea_output = f'{self.sentence_id},{self.utc_time}.000,{self.utc_date},0,0'
         return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
-
-if __name__ == "__main__":
-    # only for tests
-    utc_time = datetime.datetime.utcnow()
-    position: dict = {
-        'latitude_value': '6059.999',
-        'latitude_direction': 'N',
-        'longitude_value': '01023.663',
-        'longitude_direction': 'W',
-    }
-
-    nmea_obj = NmeaMsg(position=position,
-                       altitude=21.7,
-                       speed=100.000,
-                       heading=90.0)
-
-    while True:
-        a = next(nmea_obj)
-        nmea_obj.position_update(datetime.datetime.utcnow())
-        for nmea in a:
-            print(nmea)
-            time.sleep(0.05)
-        time.sleep(0.2)
