@@ -1,6 +1,7 @@
 import random
 from math import ceil
 import datetime
+from typing import Union
 
 from pyproj import Geod
 
@@ -34,6 +35,7 @@ class NmeaMsg:
                            sog=speed,
                            cmg=heading)
         self.gphdt = Gphdt(heading=heading)
+        self.gpvtg = Gpvtg(heading_true=heading, sog_knots=speed)
         self.gpzda = Gpzda(utc_date_time=self.utc_date_time)
         self.nmea_sentences = [self.gga,
                                self.gpgsa,
@@ -41,6 +43,7 @@ class NmeaMsg:
                                self.gpgll,
                                self.gprmc,
                                self.gphdt,
+                               self.gpvtg,
                                self.gpzda,]
 
     def __next__(self):
@@ -58,6 +61,8 @@ class NmeaMsg:
         self.gprmc.sog = self.speed
         self.gprmc.cmg = self.heading
         self.gphdt.heading = self.heading
+        self.gpvtg.heading_true = self.heading
+        self.gpvtg.sog_knots = self.speed
         self.gpzda.utc_time = self.utc_date_time
         return self.nmea_sentences
 
@@ -451,6 +456,31 @@ class Gphdt:
 
     def __str__(self):
         nmea_output = f'{self.sentence_id},{self.heading},T'
+        return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
+
+
+class Gpvtg:
+    """
+    Track Made Good and Ground Speed.
+    Example: $GPVTG,360.0,T,348.7,M,000.0,N,000.0,K*43
+    """
+    sentence_id = 'GPVTG'
+
+    def __init__(self, heading_true: float, sog_knots: float, heading_magnetic: Union[float, str] = '') -> None:
+        self.heading_true = heading_true
+        self.heading_magnetic = heading_magnetic
+        self.sog_knots = sog_knots
+
+    @property
+    def sog_kmhr(self) -> float:
+        """
+        Return speed over ground is in kilometers/hour.
+        """
+        return round(self.sog_knots * 1.852, 1)
+
+    def __str__(self) -> str:
+        nmea_output = f'{self.sentence_id},{self.heading_true},T,{self.heading_magnetic},M,' \
+                      f'{self.sog_knots},N,{self.sog_kmhr},K'
         return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 
