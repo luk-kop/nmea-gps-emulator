@@ -8,7 +8,7 @@ import uuid
 
 import serial.tools.list_ports
 
-from auxiliary_funcs import exit_script
+from utils import exit_script
 
 
 def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> None:

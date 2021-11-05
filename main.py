@@ -7,7 +7,7 @@ import uuid
 import logging
 
 from nmea_gps import NmeaMsg
-from auxiliary_funcs import position_input, ip_port_input, trans_proto_input, heading_input, speed_input, \
+from utils import position_input, ip_port_input, trans_proto_input, heading_input, speed_input, \
     heading_speed_input, serial_config_input
 from custom_thread import NmeaStreamThread, NmeaSerialThread, run_telnet_server_thread
 
@@ -48,14 +48,20 @@ class Menu:
         """
         self.display_menu()
         while True:
-            choice = input('>>> ')
+            try:
+                choice = input('>>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             action = self.choices.get(choice)
             if action:
                 # Dummy 'nav_data_dict'
-                nav_data_dict = {'gps_speed': 10.035,
-                                 'gps_heading': 45.0,
-                                 'gps_altitude_amsl': 15.2,
-                                 'position': {}}
+                nav_data_dict = {
+                    'gps_speed': 10.035,
+                    'gps_heading': 45.0,
+                    'gps_altitude_amsl': 15.2,
+                    'position': {}
+                }
                 # Position, initial course and speed queries
                 nav_data_dict['position'] = position_input()
                 nav_data_dict['gps_heading'] = heading_input()
@@ -72,13 +78,17 @@ class Menu:
         first_run = True
         while True:
             if not self.nmea_thread.is_alive():
-                print('\n*** Closing the script... ***\n')
+                print('\n\n*** Closing the script... ***\n')
                 sys.exit()
             try:
                 if first_run:
                     time.sleep(2)
                     first_run = False
-                prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
+                try:
+                    prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
+                except KeyboardInterrupt:
+                    print('\n\n*** Closing the script... ***\n')
+                    sys.exit()
                 if prompt == '':
                     new_head, new_speed = heading_speed_input()
                     # Get all 'nmea_srv*' telnet server threads
@@ -96,7 +106,7 @@ class Menu:
                         self.nmea_obj.speed_targeted = new_speed
                     print()
             except KeyboardInterrupt:
-                print('\n*** Closing the script... ***\n')
+                print('\n\n*** Closing the script... ***\n')
                 sys.exit()
 
     def nmea_serial(self):

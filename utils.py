@@ -27,7 +27,11 @@ def position_input() -> dict:
     while True:
         try:
             print('\n### Enter unit position (format - 5430N 01920E): ###')
-            position_data = input('>>> ')
+            try:
+                position_data = input('>>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             if position_data == '':
                 # Default position
                 position_dict = {
@@ -56,7 +60,7 @@ def position_input() -> dict:
                 return position_dict
             print('\nError: Wrong entry! Try again.')
         except KeyboardInterrupt:
-            print('\n*** Closing the script... ***\n')
+            print('\n\n*** Closing the script... ***\n')
             sys.exit()
 
 
@@ -68,13 +72,21 @@ def ip_port_input(option: str) -> tuple:
         try:
             if option == 'telnet':
                 print('\n### Enter Local IP address and port number [0.0.0.0:10110]: ###')
-                ip_port_socket = input('>>> ')
+                try:
+                    ip_port_socket = input('>>> ')
+                except KeyboardInterrupt:
+                    print('\n\n*** Closing the script... ***\n')
+                    sys.exit()
                 if ip_port_socket == '':
                     # All available interfaces and default NMEA port.
                     return ('0.0.0.0', 10110)
             elif option == 'stream':
                 print('\n### Enter Remote IP address and port number [127.0.0.1:10110]: ###')
-                ip_port_socket = input('>>> ')
+                try:
+                    ip_port_socket = input('>>> ')
+                except KeyboardInterrupt:
+                    print('\n\n*** Closing the script... ***\n')
+                    sys.exit()
                 if ip_port_socket == '':
                     return ('127.0.0.1', 10110)
             # Regex matchs only unicast IP addr from range 0.0.0.0 - 223.255.255.255
@@ -90,7 +102,7 @@ def ip_port_input(option: str) -> tuple:
             if mo:
                 # return tuple with IP address (str) and port number (int).
                 return (mo.group(2), int(mo.group(6)))
-            print(f'\nError: Wrong format use - 192.168.10.10:2020.')
+            print(f'\n\nError: Wrong format use - 192.168.10.10:2020.')
         except KeyboardInterrupt:
             print('\n*** Closing the script... ***\n')
             sys.exit()
@@ -103,13 +115,17 @@ def trans_proto_input() -> str:
     while True:
         try:
             print('\n### Enter transport protocol - TCP or UDP [TCP]: ###')
-            stream_proto = input('>>> ').strip().lower()
+            try:
+                stream_proto = input('>>> ').strip().lower()
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             if stream_proto == '' or stream_proto == 'tcp':
                 return 'tcp'
             elif stream_proto == 'udp':
                 return 'udp'
         except KeyboardInterrupt:
-            print('\n*** Closing the script... ***\n')
+            print('\n\n*** Closing the script... ***\n')
             sys.exit()
 
 
@@ -120,7 +136,11 @@ def heading_input() -> float:
     while True:
         try:
             print('\n### Enter unit course - range 000-359 [090]: ###')
-            heading_data = input('>>> ')
+            try:
+                heading_data = input('>>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             if heading_data == '':
                 return 90.0
             heading_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
@@ -128,7 +148,7 @@ def heading_input() -> float:
             if mo:
                 return float(mo.group())
         except KeyboardInterrupt:
-            print('\n*** Closing the script... ***\n')
+            print('\n\n*** Closing the script... ***\n')
             sys.exit()
 
 
@@ -139,7 +159,11 @@ def speed_input() -> float:
     while True:
         try:
             print('\n### Enter unit speed in knots - range 0-999 [10.5]: ###')
-            speed_data = input('>>> ')
+            try:
+                speed_data = input('>>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             if speed_data == '':
                 return 10.500
             speed_regex_pattern = r'(\d{1,3}(\.\d)?)'
@@ -150,7 +174,7 @@ def speed_input() -> float:
                     match = match.lstrip('0')
                 return float(match)
         except KeyboardInterrupt:
-            print('\n*** Closing the script... ***\n')
+            print('\n\n*** Closing the script... ***\n')
             sys.exit()
 
 
@@ -160,14 +184,22 @@ def heading_speed_input() -> tuple:
     """
     try:
         while True:
-            heading_data = input('New course >>> ')
+            try:
+                heading_data = input('New course >>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             heading_regex_pattern = r'(3[0-5]\d|[0-2]\d{2}|\d{1,2})'
             mo = re.fullmatch(heading_regex_pattern, heading_data)
             if mo:
                 heading_new = float(mo.group())
                 break
         while True:
-            speed_data = input('New speed >>> ')
+            try:
+                speed_data = input('New speed >>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             speed_regex_pattern = r'(\d{1,3}(\.\d)?)'
             mo = re.fullmatch(speed_regex_pattern, speed_data)
             if mo:
@@ -178,7 +210,7 @@ def heading_speed_input() -> tuple:
                 break
         return heading_new, speed_new
     except KeyboardInterrupt:
-        print('\n*** Closing the script... ***\n')
+        print('\n\n*** Closing the script... ***\n')
         sys.exit()
 
 
@@ -206,14 +238,22 @@ def serial_config_input() -> dict:
     while True:
         if platform_os.lower() == 'linux':
             print('\n### Choose Serial Port [/dev/ttyUSB0]: ###')
-            serial_set['port'] = input('>>> ')
+            try:
+                serial_set['port'] = input('>>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             if serial_set['port'] == '':
                 serial_set['port'] = '/dev/ttyUSB0'
             if serial_set['port'] in ports_connected_names:
                 break
         elif platform_os.lower() == 'windows':
             print('\n### Choose Serial Port [COM1]: ###')
-            serial_set['port'] = input('>>> ')
+            try:
+                serial_set['port'] = input('>>> ')
+            except KeyboardInterrupt:
+                print('\n\n*** Closing the script... ***\n')
+                sys.exit()
             if serial_set['port'] == '':
                 serial_set['port'] = 'COM1'
             if serial_set['port'] in ports_connected_names:
@@ -225,7 +265,11 @@ def serial_config_input() -> dict:
                      '19200', '38400', '57600', '115200', '128000']
     while True:
         print('\n### Enter serial baudrate [9600]: ###')
-        serial_set['baudrate'] = input('>>> ')
+        try:
+            serial_set['baudrate'] = input('>>> ')
+        except KeyboardInterrupt:
+            print('\n\n*** Closing the script... ***\n')
+            sys.exit()
         if serial_set['baudrate'] == '':
             serial_set['baudrate'] = 9600
         if str(serial_set['baudrate']) in baudrate_list:
