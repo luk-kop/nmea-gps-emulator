@@ -3,3 +3,4 @@
 extra/
 venv/
 __pycache__/
+env/

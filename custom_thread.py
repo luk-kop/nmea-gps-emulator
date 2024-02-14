@@ -5,6 +5,9 @@ import socket
 import re
 import sys
 import uuid
+import spidev
+import RPi.GPIO as GPIO
+
 
 import serial.tools.list_ports
 
@@ -204,3 +207,45 @@ class NmeaSerialThread(NmeaSrvThread):
             error_formatted = re.sub(r'\[(.*?)\]', '', str(error)).strip().replace('  ', ' ').capitalize()
             logging.error(f"{error_formatted}. Please try \'sudo chmod a+rw {self.serial_config['port']}\'")
             exit_script()
+
+class NmeaSpiThread(NmeaSrvThread):
+    """
+    A class that represent a thread dedicated for SPI communication.
+    """
+    def __init__(self, spi_config, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.spi_config = spi_config
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(22, GPIO.OUT)
+
+    def run(self):
+        try:
+            spi = spidev.SpiDev()
+            spi.open(self.spi_config['bus'], self.spi_config['device'])
+            spi.max_speed_hz = self.spi_config["speed"]
+            spi.mode = self.spi_config["mode"]
+
+            while True:
+                    timer_start = time.perf_counter()
+                    with self._lock:
+                        # Nmea object speed and heading update
+                        if self.heading and self.heading != self._heading_cache:
+                            self.nmea_object.heading_targeted = self.heading
+                            self._heading_cache = self.heading
+                        if self.speed and self.speed != self._speed_cache:
+                            self.nmea_object.speed_targeted = self.speed
+                            self._speed_cache = self.speed
+                        nmea_list = [f'{_}' for _ in next(self.nmea_object)]
+                        for nmea in nmea_list:
+                            #Pull IRQ high when we have data
+                            GPIO.output(22, GPIO.HIGH)
+                            spi.xfer2(str.encode(nmea))
+                            GPIO.output(22, GPIO.LOW)
+                            time.sleep(0.05)
+                    time.sleep(1 - (time.perf_counter() - timer_start))
+        except serial.serialutil.SerialException as error:
+            # Remove error number from output [...]
+            error_formatted = re.sub(r'\[(.*?)\]', '', str(error)).strip().replace('  ', ' ').capitalize()
+            logging.error(f"{error_formatted}. Please try \'sudo chmod a+rw {self.spi_config['port']}\'")
+            exit_script()
+

@@ -436,10 +436,10 @@ class Gpgsv:
             azimuth: int = random.randint(0, 359)
             snr: int = random.randint(0, 99)
             self.sats_details += f',{satellite_id},{elevation:02d},{azimuth:03d},{snr:02d}'
-
+        self.signal_id = 1
     def __str__(self) -> str:
         nmea_output = f'{self.sentence_id},{self.num_of_gsv_in_group},{self.sentence_num},' \
-                      f'{self.sats_total}{self.sats_details}'
+                      f'{self.sats_total}{self.sats_details},{self.signal_id}'
         return f'${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n'
 
 

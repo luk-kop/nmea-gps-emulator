@@ -28,7 +28,8 @@ def position_input() -> dict:
         try:
             print('\n### Enter unit position (format - 5430N 01920E): ###')
             try:
-                position_data = input('>>> ')
+                #position_data = input('>>> ')
+                position_data = ''
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
                 sys.exit()
@@ -137,7 +138,8 @@ def heading_input() -> float:
         try:
             print('\n### Enter unit course - range 000-359 [090]: ###')
             try:
-                heading_data = input('>>> ')
+                #heading_data = input('>>> ')
+                heading_data = ''
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
                 sys.exit()
@@ -160,7 +162,8 @@ def speed_input() -> float:
         try:
             print('\n### Enter unit speed in knots - range 0-999 [10.5]: ###')
             try:
-                speed_data = input('>>> ')
+                #speed_data = input('>>> ')
+                speed_data = ''
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
                 sys.exit()
@@ -213,6 +216,22 @@ def heading_speed_input() -> tuple:
         print('\n\n*** Closing the script... ***\n')
         sys.exit()
 
+def spi_config_input() -> dict:
+    """
+    The function asks for SPI configuration
+    """
+    spi_set = {'bus' : 0,
+               'device' : 1,
+               'speed' : 2000000,
+               'mode' : 0
+    }
+
+    #ToDo: Add settings as input
+
+    return spi_set
+
+
+
 
 def serial_config_input() -> dict:
     """
@@ -239,7 +258,8 @@ def serial_config_input() -> dict:
         if platform_os.lower() == 'linux':
             print('\n### Choose Serial Port [/dev/ttyUSB0]: ###')
             try:
-                serial_set['port'] = input('>>> ')
+                #serial_set['port'] = input('>>> ')
+                serial_set['port'] = ''
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
                 sys.exit()
@@ -266,12 +286,13 @@ def serial_config_input() -> dict:
     while True:
         print('\n### Enter serial baudrate [9600]: ###')
         try:
-            serial_set['baudrate'] = input('>>> ')
+            #serial_set['baudrate'] = input('>>> ')
+            serial_set['baudrate'] = ''
         except KeyboardInterrupt:
             print('\n\n*** Closing the script... ***\n')
             sys.exit()
         if serial_set['baudrate'] == '':
-            serial_set['baudrate'] = 9600
+            serial_set['baudrate'] = 115200
         if str(serial_set['baudrate']) in baudrate_list:
             break
         print(f'\n*** Error: \'{serial_set["baudrate"]}\' is wrong port\'s baudrate. ***')

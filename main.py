@@ -8,8 +8,8 @@ import logging
 
 from nmea_gps import NmeaMsg
 from utils import position_input, ip_port_input, trans_proto_input, heading_input, speed_input, \
-    heading_speed_input, serial_config_input
-from custom_thread import NmeaStreamThread, NmeaSerialThread, run_telnet_server_thread
+    heading_speed_input, serial_config_input, spi_config_input
+from custom_thread import NmeaStreamThread, NmeaSerialThread, run_telnet_server_thread, NmeaSpiThread
 
 
 class Menu:
@@ -21,9 +21,10 @@ class Menu:
         self.nmea_obj = None
         self.choices = {
             '1': self.nmea_serial,
-            '2': self.nmea_tcp_server,
-            '3': self.nmea_stream,
-            '4': self.quit,
+            '2': self.nmea_spi,
+            '3': self.nmea_tcp_server,
+            '4': self.nmea_stream,
+            '5': self.quit,
         }
 
     def display_menu(self):
@@ -38,22 +39,24 @@ class Menu:
         ''')
         print('### Choose emulator option: ###')
         print('1 - NMEA Serial')
-        print('2 - NMEA TCP Server')
-        print('3 - NMEA TCP or UDP Stream')
-        print('4 - Quit')
+        print('2 - NMEA SPI')
+        print('3 - NMEA TCP Server')
+        print('4 - NMEA TCP or UDP Stream')
+        print('5 - Quit')
 
     def run(self):
         """
         Display the menu and respond to choices.
         """
-        self.display_menu()
+        #self.display_menu()
         while True:
-            try:
-                choice = input('>>> ')
-            except KeyboardInterrupt:
-                print('\n\n*** Closing the script... ***\n')
-                sys.exit()
-            action = self.choices.get(choice)
+            #try:
+            #    #choice = input('>>> ')
+            #except KeyboardInterrupt:
+            #    print('\n\n*** Closing the script... ***\n')
+            #    sys.exit()
+            action = self.choices.get('1')
+            
             if action:
                 # Dummy 'nav_data_dict'
                 nav_data_dict = {
@@ -81,15 +84,15 @@ class Menu:
                 print('\n\n*** Closing the script... ***\n')
                 sys.exit()
             try:
-                if first_run:
-                    time.sleep(2)
-                    first_run = False
-                try:
-                    prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
-                except KeyboardInterrupt:
-                    print('\n\n*** Closing the script... ***\n')
-                    sys.exit()
-                if prompt == '':
+                #if first_run:
+                #    time.sleep(2)
+                #    first_run = False
+                #try:
+                #    prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
+                #except KeyboardInterrupt:
+                #    print('\n\n*** Closing the script... ***\n')
+                #    sys.exit()
+                #if prompt == '':
                     new_head, new_speed = heading_speed_input()
                     # Get all 'nmea_srv*' telnet server threads
                     thread_list = [thread for thread in threading.enumerate() if thread.name.startswith('nmea_srv')]
@@ -121,6 +124,20 @@ class Menu:
                                        serial_config=serial_config,
                                        nmea_object=self.nmea_obj)
         self.nmea_thread.start()
+
+    def nmea_spi(self):
+        """
+        Runs SPI which emulate NMEA server-device
+        """
+
+        spi_config = spi_config_input()
+        self.nmea_thread = NmeaSpiThread(name=f'nmea_srv{uuid.uuid4().hex}',
+                                       daemon=True,
+                                       spi_config=spi_config,
+                                       nmea_object=self.nmea_obj)
+        self.nmea_thread.start()
+
+
 
     def nmea_tcp_server(self):
         """
