@@ -13,36 +13,54 @@ from utils import position_input, ip_port_input, trans_proto_input, heading_inpu
 from custom_thread import NmeaStreamThread, NmeaSerialThread, run_telnet_server_thread, NmeaSpiThread
 
 
-class GNSS_EMULATOR:
+class GnssEmulator:
     """
     Display a menu and respond to choices when run.
     """
-    def __init__(self, choice: str = "1"):
+    def __init__(self, choice: str = "1", speed: str ="10.035", heading: str = "45.0"):
         self.nmea_thread = None
         self.nmea_obj = None
+        self._is_alive = False
+        self.speed = speed
+        self.heading = heading
         self.choices = {
-            '1': self.nmea_serial,
-            '2': self.nmea_spi,
-            '3': self.nmea_tcp_server,
-            '4': self.nmea_stream,
-            '5': self.quit,
+            'serial': self.nmea_serial,
+            'spi': self.nmea_spi,
+            'tcp': self.nmea_tcp_server,
+            'stream': self.nmea_stream,
+            'quit': self.quit,
         }
-        pdb.set_trace()
         action = self.choices.get(choice)
         self.run(action)
-        pdb.set_trace()
+
+    def start(self):
+        self._is_alive = True
+
+    def close(self):
+        self._is_alive = False
+
+    def update_speed(self, speed):
+        self.speed = speed
+
+    def update_heading(self, heading):
+        self.heading = heading
 
     def run(self, action):
         while True:
-            pdb.set_trace()
+            if action == self.nmea_spi:
+                #SPI uses RPi.GPIO which only runs on PI, add an option such that one can choose SPI on PC also.
+                print('\n\n*** SPI is WIP. Not possible to use yet***\n')
+                sys.exit()
             if action:
                 # Dummy 'nav_data_dict'
+                #Default speed, heading, altitude
                 nav_data_dict = {
                     'gps_speed': 10.035,
                     'gps_heading': 45.0,
                     'gps_altitude_amsl': 15.2,
                     'position': {}
                 }
+
                 # Position, initial course and speed queries
                 nav_data_dict['position'] = position_input()
                 nav_data_dict['gps_heading'] = heading_input()
@@ -56,30 +74,28 @@ class GNSS_EMULATOR:
                 action()
                 break
         # Changing the unit's course and speed by the user in the main thread.
-        first_run = True
-        while True:
-            if not self.nmea_thread.is_alive():
+        while self._is_alive:
+            if not self.nmea_thread.is_alive() or not self._is_alive:
                 print('\n\n*** Closing the script... ***\n')
-                sys.exit()
-            try:
-                    new_head, new_speed = heading_speed_input()
-                    # Get all 'nmea_srv*' telnet server threads
-                    thread_list = [thread for thread in threading.enumerate() if thread.name.startswith('nmea_srv')]
-                    if thread_list:
-                        for thr in thread_list:
-                            # Update speed and heading
-                            # a = time.time()
-                            thr.set_heading(new_head)
-                            thr.set_speed(new_speed)
-                            # print(time.time() - a)
-                    else:
-                        # Set targeted head and speed without connected clients
-                        self.nmea_obj.heading_targeted = new_head
-                        self.nmea_obj.speed_targeted = new_speed
-                    print()
-            except KeyboardInterrupt:
-                print('\n\n*** Closing the script... ***\n')
-                sys.exit()
+                break
+            new_head, new_speed = heading_speed_input(self.heading, self.speed)
+            print(new_head)
+            print(new_speed)
+            # Get all 'nmea_srv*' telnet server threads
+            thread_list = [thread for thread in threading.enumerate() if thread.name.startswith('nmea_srv')]
+            if thread_list:
+                for thr in thread_list:
+                    # Update speed and heading
+                    # a = time.time()
+                    thr.set_heading(new_head)
+                    thr.set_speed(new_speed)
+                    # print(time.time() - a)
+                else:
+                    # Set targeted head and speed without connected clients
+                    self.nmea_obj.heading_targeted = new_head
+                    self.nmea_obj.speed_targeted = new_speed
+                print()
+            time.sleep(0.05)
 
     def nmea_serial(self):
         """
@@ -148,6 +164,6 @@ if __name__ == '__main__':
     log_format = '%(asctime)s: %(message)s'
     logging.basicConfig(format=log_format, level=logging.INFO, datefmt='%H:%M:%S')
 
-    GNSS_EMULATOR()
+    GnssEmulator()
 
 

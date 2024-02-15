@@ -29,6 +29,7 @@ def position_input() -> dict:
             print('\n### Enter unit position (format - 5430N 01920E): ###')
             try:
                 #position_data = input('>>> ')
+                #Add such that one can input positional data from test. Just default value for now.
                 position_data = ''
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
@@ -139,6 +140,7 @@ def heading_input() -> float:
             print('\n### Enter unit course - range 000-359 [090]: ###')
             try:
                 #heading_data = input('>>> ')
+                #Add such that one can input positional data from test. Just default value for now.
                 heading_data = ''
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
@@ -162,7 +164,8 @@ def speed_input() -> float:
         try:
             print('\n### Enter unit speed in knots - range 0-999 [10.5]: ###')
             try:
-                #speed_data = input('>>> ')
+                speed_data = ''#input('>>> ')
+                #Add such that one can input positional data from test. Just default value for now.
                 speed_data = ''
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
@@ -188,7 +191,7 @@ def heading_speed_input() -> tuple:
     try:
         while True:
             try:
-                heading_data = input('New course >>> ')
+                heading_data = ''#input('New course >>> ')
             except KeyboardInterrupt:
                 print('\n\n*** Closing the script... ***\n')
                 sys.exit()
@@ -204,6 +207,7 @@ def heading_speed_input() -> tuple:
                 print('\n\n*** Closing the script... ***\n')
                 sys.exit()
             speed_regex_pattern = r'(\d{1,3}(\.\d)?)'
+            print(speed_data)
             mo = re.fullmatch(speed_regex_pattern, speed_data)
             if mo:
                 match = mo.group()

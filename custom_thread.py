@@ -6,7 +6,7 @@ import re
 import sys
 import uuid
 import spidev
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 
 
 import serial.tools.list_ports
@@ -215,6 +215,7 @@ class NmeaSpiThread(NmeaSrvThread):
     def __init__(self, spi_config, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.spi_config = spi_config
+        #Should make an opton for input of  Raspberry PI
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(22, GPIO.OUT)
 
