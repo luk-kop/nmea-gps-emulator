@@ -102,7 +102,7 @@ class NmeaSrvThread(threading.Thread):
                     logging.info(f'Connection closed with {self.ip_add[0]}:{self.ip_add[1]}')
                     # Close thread
                     sys.exit()
-            time.sleep(1 - (time.perf_counter() - timer_start))
+            time.sleep(max(1 - (time.perf_counter() - timer_start), 0))
 
 
 class NmeaStreamThread(NmeaSrvThread):
