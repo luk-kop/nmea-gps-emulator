@@ -43,10 +43,10 @@ def position_input() -> dict:
                 return position_dict
             position_regex_pattern = re.compile(r'''^(
                 ([0-8]\d[0-5]\d|9000)                               # Latitude
-                (N|S)
+                (N|S|n|s)
                 \s?
                 (([0-1][0-7]\d[0-5]\d)|(0[0-9]\d[0-5]\d)|18000)     # Longitude
-                (E|W)
+                (E|W|e|w)
                 )$''', re.VERBOSE)
             mo = position_regex_pattern.fullmatch(position_data)
             if mo:
