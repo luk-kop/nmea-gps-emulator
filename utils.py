@@ -236,7 +236,7 @@ def serial_config_input() -> dict:
     platform_os = platform.system()
     # Asks for serial port name and checks the name validity.
     while True:
-        if platform_os.lower() == 'linux':
+        if platform_os.lower() in  [ 'linux', 'darwin' ]:
             print('\n### Choose Serial Port [/dev/ttyUSB0]: ###')
             try:
                 serial_set['port'] = input('>>> ')
