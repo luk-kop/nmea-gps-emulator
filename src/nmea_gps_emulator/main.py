@@ -10,6 +10,7 @@ from typing import NoReturn
 from .custom_thread import NmeaSerialThread, NmeaStreamThread, run_telnet_server_thread
 from .nmea_gps import NmeaMsg
 from .utils import (
+    handle_keyboard_interrupt,
     heading_input,
     heading_speed_input,
     ip_port_input,
@@ -60,8 +61,7 @@ class Menu:
             try:
                 choice = input(">>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             action = self.choices.get(choice)
             if action:
                 # Dummy 'nav_data_dict'
@@ -100,8 +100,7 @@ class Menu:
                         'Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n'
                     )
                 except KeyboardInterrupt:
-                    print("\n\n*** Closing the script... ***\n")
-                    sys.exit()
+                    handle_keyboard_interrupt()
                 if prompt == "":
                     new_head, new_speed = heading_speed_input()
                     # Get all 'nmea_srv*' telnet server threads
@@ -123,8 +122,7 @@ class Menu:
                         self.nmea_obj.speed_targeted = new_speed
                     print()
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
 
     def nmea_serial(self) -> None:
         """

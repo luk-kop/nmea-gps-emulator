@@ -3,6 +3,7 @@ import platform
 import re
 import sys
 import time
+from typing import NoReturn
 
 import psutil
 import serial.tools.list_ports
@@ -18,6 +19,12 @@ from .constants import (
     DEFAULT_SPEED,
     SUPPORTED_BAUDRATES,
 )
+
+
+def handle_keyboard_interrupt() -> NoReturn:
+    """Handle KeyboardInterrupt by printing a message and exiting."""
+    print("\n\n*** Closing the script... ***\n")
+    sys.exit()
 
 
 def exit_script() -> None:
@@ -37,8 +44,7 @@ def position_input() -> dict[str, str]:
             try:
                 position_data = input(">>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             if position_data == "":
                 return DEFAULT_POSITION.copy()
             position_regex_pattern = re.compile(
@@ -62,8 +68,7 @@ def position_input() -> dict[str, str]:
                 return position_dict
             print("\nError: Wrong entry! Try again.")
         except KeyboardInterrupt:
-            print("\n\n*** Closing the script... ***\n")
-            sys.exit()
+            handle_keyboard_interrupt()
 
 
 def ip_port_input(option: str) -> tuple[str, int]:
@@ -77,8 +82,7 @@ def ip_port_input(option: str) -> tuple[str, int]:
                 try:
                     ip_port_socket = input(">>> ")
                 except KeyboardInterrupt:
-                    print("\n\n*** Closing the script... ***\n")
-                    sys.exit()
+                    handle_keyboard_interrupt()
                 if ip_port_socket == "":
                     return (DEFAULT_LOCAL_IP, DEFAULT_NMEA_PORT)
             elif option == "stream":
@@ -88,8 +92,7 @@ def ip_port_input(option: str) -> tuple[str, int]:
                 try:
                     ip_port_socket = input(">>> ")
                 except KeyboardInterrupt:
-                    print("\n\n*** Closing the script... ***\n")
-                    sys.exit()
+                    handle_keyboard_interrupt()
                 if ip_port_socket == "":
                     return (DEFAULT_REMOTE_IP, DEFAULT_NMEA_PORT)
             ip_port_regex_pattern = re.compile(
@@ -107,8 +110,7 @@ def ip_port_input(option: str) -> tuple[str, int]:
                 return (mo.group(2), int(mo.group(6)))
             print("\n\nError: Wrong format use - 192.168.10.10:2020.")
         except KeyboardInterrupt:
-            print("\n*** Closing the script... ***\n")
-            sys.exit()
+            handle_keyboard_interrupt()
 
 
 def trans_proto_input() -> str:
@@ -119,15 +121,13 @@ def trans_proto_input() -> str:
             try:
                 stream_proto = input(">>> ").strip().lower()
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             if stream_proto == "" or stream_proto == "tcp":
                 return "tcp"
             elif stream_proto == "udp":
                 return "udp"
         except KeyboardInterrupt:
-            print("\n\n*** Closing the script... ***\n")
-            sys.exit()
+            handle_keyboard_interrupt()
 
 
 def heading_input() -> float:
@@ -138,8 +138,7 @@ def heading_input() -> float:
             try:
                 heading_data = input(">>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             if heading_data == "":
                 return DEFAULT_HEADING
             heading_regex_pattern = r"(3[0-5]\d|[0-2]\d{2}|\d{1,2})"
@@ -147,8 +146,7 @@ def heading_input() -> float:
             if mo:
                 return float(mo.group())
         except KeyboardInterrupt:
-            print("\n\n*** Closing the script... ***\n")
-            sys.exit()
+            handle_keyboard_interrupt()
 
 
 def speed_input() -> float:
@@ -159,20 +157,18 @@ def speed_input() -> float:
             try:
                 speed_data = input(">>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             if speed_data == "":
                 return DEFAULT_SPEED
-            speed_regex_pattern = r"(\d{1,3}(\.\d)?)"
+            speed_regex_pattern = r"(\d{1,3}(\.\d+)?)"
             mo = re.fullmatch(speed_regex_pattern, speed_data)
             if mo:
                 match = mo.group()
-                if match.startswith("0") and match != "0":
+                if match.startswith("0") and match != "0" and not match.startswith("0."):
                     match = match.lstrip("0")
                 return float(match)
         except KeyboardInterrupt:
-            print("\n\n*** Closing the script... ***\n")
-            sys.exit()
+            handle_keyboard_interrupt()
 
 
 def heading_speed_input() -> tuple[float, float]:
@@ -182,8 +178,7 @@ def heading_speed_input() -> tuple[float, float]:
             try:
                 heading_data = input("New course >>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             heading_regex_pattern = r"(3[0-5]\d|[0-2]\d{2}|\d{1,2})"
             mo = re.fullmatch(heading_regex_pattern, heading_data)
             if mo:
@@ -193,20 +188,18 @@ def heading_speed_input() -> tuple[float, float]:
             try:
                 speed_data = input("New speed >>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
-            speed_regex_pattern = r"(\d{1,3}(\.\d)?)"
+                handle_keyboard_interrupt()
+            speed_regex_pattern = r"(\d{1,3}(\.\d+)?)"
             mo = re.fullmatch(speed_regex_pattern, speed_data)
             if mo:
                 match = mo.group()
-                if match.startswith("0") and match != "0":
+                if match.startswith("0") and match != "0" and not match.startswith("0."):
                     match = match.lstrip("0")
                 speed_new = float(match)
                 break
         return heading_new, speed_new
     except KeyboardInterrupt:
-        print("\n\n*** Closing the script... ***\n")
-        sys.exit()
+        handle_keyboard_interrupt()
 
 
 def serial_config_input() -> dict[str, str | int]:
@@ -232,8 +225,7 @@ def serial_config_input() -> dict[str, str | int]:
             try:
                 serial_set["port"] = input(">>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             if serial_set["port"] == "":
                 serial_set["port"] = "/dev/ttyUSB0"
             if serial_set["port"] in ports_connected_names:
@@ -243,8 +235,7 @@ def serial_config_input() -> dict[str, str | int]:
             try:
                 serial_set["port"] = input(">>> ")
             except KeyboardInterrupt:
-                print("\n\n*** Closing the script... ***\n")
-                sys.exit()
+                handle_keyboard_interrupt()
             if serial_set["port"] == "":
                 serial_set["port"] = "COM1"
             if serial_set["port"] in ports_connected_names:
@@ -256,8 +247,7 @@ def serial_config_input() -> dict[str, str | int]:
         try:
             serial_set["baudrate"] = input(">>> ")
         except KeyboardInterrupt:
-            print("\n\n*** Closing the script... ***\n")
-            sys.exit()
+            handle_keyboard_interrupt()
         if serial_set["baudrate"] == "":
             serial_set["baudrate"] = DEFAULT_SERIAL_BAUDRATE
         if str(serial_set["baudrate"]) in SUPPORTED_BAUDRATES:
