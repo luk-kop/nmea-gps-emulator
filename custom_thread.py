@@ -155,7 +155,7 @@ class NmeaStreamThread(NmeaSrvThread):
                                 s.send(nmea.encode())
                                 time.sleep(NMEA_SENTENCE_DELAY_SEC)
                             # Start next loop after 1 sec
-                        time.sleep(1 - (time.perf_counter() - timer_start))
+                        time.sleep(max(1 - (time.perf_counter() - timer_start), 0))
             except (
                 OSError,
                 TimeoutError,
@@ -188,7 +188,7 @@ class NmeaStreamThread(NmeaSrvThread):
                                 print(f"*** Error: {err.strerror} ***")
                                 exit_script()
                         # Start next loop after 1 sec
-                    time.sleep(1 - (time.perf_counter() - timer_start))
+                    time.sleep(max(1 - (time.perf_counter() - timer_start), 0))
 
 
 class NmeaSerialThread(NmeaSrvThread):
@@ -230,7 +230,7 @@ class NmeaSerialThread(NmeaSrvThread):
                         for nmea in nmea_list:
                             ser.write(str.encode(nmea))
                             time.sleep(NMEA_SENTENCE_DELAY_SEC)
-                    time.sleep(1 - (time.perf_counter() - timer_start))
+                    time.sleep(max(1 - (time.perf_counter() - timer_start), 0))
         except serial.serialutil.SerialException as error:
             # Remove error number from output [...]
             error_formatted = (
