@@ -1,18 +1,23 @@
 import logging
+import re
+import socket
+import sys
 import threading
 import time
-import socket
-import re
-import sys
 import uuid
+from typing import Any, NoReturn
 
+import serial
 import serial.tools.list_ports
 
-from utils import exit_script
 from constants import MAX_TCP_CONNECTIONS, NMEA_SENTENCE_DELAY_SEC
+from nmea_gps import NmeaMsg
+from utils import exit_script
 
 
-def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> None:
+def run_telnet_server_thread(
+    srv_ip_address: str, srv_port: int, nmea_obj: NmeaMsg
+) -> NoReturn:
     """
     Function starts thread with TCP (telnet) server sending NMEA data to connected client (clients).
     """
@@ -65,26 +70,33 @@ class NmeaSrvThread(threading.Thread):
     A class that represents a thread dedicated for TCP (telnet) server-client connection.
     """
 
-    def __init__(self, nmea_object, ip_add=None, conn=None, *args, **kwargs):
+    def __init__(
+        self,
+        nmea_object: NmeaMsg,
+        ip_add: tuple[str, int] | None = None,
+        conn: socket.socket | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
-        self.heading = None
-        self.speed = None
-        self._heading_cache = 0
-        self._speed_cache = 0
-        self.conn = conn
-        self.ip_add = ip_add
-        self.nmea_object = nmea_object
-        self._lock = threading.RLock()
+        self.heading: float | None = None
+        self.speed: float | None = None
+        self._heading_cache: float = 0
+        self._speed_cache: float = 0
+        self.conn: socket.socket | None = conn
+        self.ip_add: tuple[str, int] | None = ip_add
+        self.nmea_object: NmeaMsg = nmea_object
+        self._lock: threading.RLock = threading.RLock()
 
-    def set_speed(self, speed):
+    def set_speed(self, speed: float) -> None:
         with self._lock:
             self.speed = speed
 
-    def set_heading(self, heading):
+    def set_heading(self, heading: float) -> None:
         with self._lock:
             self.heading = heading
 
-    def run(self):
+    def run(self) -> None:
         while True:
             timer_start = time.perf_counter()
             with self._lock:
@@ -127,12 +139,12 @@ class NmeaStreamThread(NmeaSrvThread):
     A class that represents a thread dedicated for TCP or UDP stream connection.
     """
 
-    def __init__(self, proto, port, *args, **kwargs):
+    def __init__(self, proto: str, port: int, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.proto = proto
-        self.port = port
+        self.proto: str = proto
+        self.port: int = port
 
-    def run(self):
+    def run(self) -> None:
         if self.proto == "tcp":
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -196,11 +208,13 @@ class NmeaSerialThread(NmeaSrvThread):
     A class that represents a thread dedicated for serial connection.
     """
 
-    def __init__(self, serial_config, *args, **kwargs):
+    def __init__(
+        self, serial_config: dict[str, str | int], *args: Any, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
-        self.serial_config = serial_config
+        self.serial_config: dict[str, str | int] = serial_config
 
-    def run(self):
+    def run(self) -> None:
         # Open serial port.
         try:
             with serial.Serial(

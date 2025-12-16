@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 
-import time
+import logging
 import sys
 import threading
+import time
 import uuid
-import logging
+from collections.abc import Callable
+from typing import NoReturn
 
+from custom_thread import NmeaSerialThread, NmeaStreamThread, run_telnet_server_thread
 from nmea_gps import NmeaMsg
 from utils import (
-    position_input,
-    ip_port_input,
-    trans_proto_input,
     heading_input,
-    speed_input,
     heading_speed_input,
+    ip_port_input,
+    position_input,
     serial_config_input,
+    speed_input,
+    trans_proto_input,
 )
-from custom_thread import NmeaStreamThread, NmeaSerialThread, run_telnet_server_thread
 
 
 class Menu:
@@ -24,17 +26,17 @@ class Menu:
     Display a menu and respond to choices when run.
     """
 
-    def __init__(self):
-        self.nmea_thread = None
-        self.nmea_obj = None
-        self.choices = {
+    def __init__(self) -> None:
+        self.nmea_thread: threading.Thread | None = None
+        self.nmea_obj: NmeaMsg | None = None
+        self.choices: dict[str, Callable[[], None]] = {
             "1": self.nmea_serial,
             "2": self.nmea_tcp_server,
             "3": self.nmea_stream,
             "4": self.quit,
         }
 
-    def display_menu(self):
+    def display_menu(self) -> None:
         print(r"""
 
 ..####...#####....####...........######..##...##..##..##..##.......####...######...####...#####..
@@ -50,7 +52,7 @@ class Menu:
         print("3 - NMEA TCP or UDP Stream")
         print("4 - Quit")
 
-    def run(self):
+    def run(self) -> None:
         """
         Display the menu and respond to choices.
         """
@@ -125,7 +127,7 @@ class Menu:
                 print("\n\n*** Closing the script... ***\n")
                 sys.exit()
 
-    def nmea_serial(self):
+    def nmea_serial(self) -> None:
         """
         Runs serial which emulates NMEA server-device
         """
@@ -140,7 +142,7 @@ class Menu:
         )
         self.nmea_thread.start()
 
-    def nmea_tcp_server(self):
+    def nmea_tcp_server(self) -> None:
         """
         Runs telnet server witch emulates NMEA device.
         """
@@ -154,7 +156,7 @@ class Menu:
         )
         self.nmea_thread.start()
 
-    def nmea_stream(self):
+    def nmea_stream(self) -> None:
         """
         Runs TCP or UDP NMEA stream to designated host.
         """
@@ -172,7 +174,7 @@ class Menu:
         )
         self.nmea_thread.start()
 
-    def quit(self):
+    def quit(self) -> NoReturn:
         """
         Exit script.
         """

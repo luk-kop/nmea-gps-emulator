@@ -1,11 +1,12 @@
+import os
+import platform
 import re
 import sys
-import os
 import time
-import platform
 
 import psutil
 import serial.tools.list_ports
+import serial.tools.list_ports_common
 
 from constants import (
     DEFAULT_NMEA_PORT,
@@ -19,22 +20,17 @@ from constants import (
 )
 
 
-def exit_script():
-    """
-    The function enables to terminate the script (main thread) from the inside of child thread.
-    """
-    current_script_pid = os.getpid()
-    current_script = psutil.Process(current_script_pid)
+def exit_script() -> None:
+    """Terminate the script (main thread) from inside a child thread."""
+    current_script_pid: int = os.getpid()
+    current_script: psutil.Process = psutil.Process(current_script_pid)
     print("*** Closing the script... ***\n")
     time.sleep(1)
     current_script.terminate()
 
 
-def position_input() -> dict:
-    """
-    The function asks for position and checks validity of entry data.
-    Function returns position.
-    """
+def position_input() -> dict[str, str]:
+    """Ask for position and validate entry data. Returns position dict."""
     while True:
         try:
             print("\n### Enter unit position (format - 5430N 01920E): ###")
@@ -44,7 +40,6 @@ def position_input() -> dict:
                 print("\n\n*** Closing the script... ***\n")
                 sys.exit()
             if position_data == "":
-                # Default position
                 return DEFAULT_POSITION.copy()
             position_regex_pattern = re.compile(
                 r"""^(
@@ -58,8 +53,7 @@ def position_input() -> dict:
             )
             mo = position_regex_pattern.fullmatch(position_data)
             if mo:
-                # Returns position data
-                position_dict = {
+                position_dict: dict[str, str] = {
                     "latitude_value": f"{float(mo.group(2)):08.3f}",
                     "latitude_direction": mo.group(3),
                     "longitude_value": f"{float(mo.group(4)):09.3f}",
@@ -72,10 +66,8 @@ def position_input() -> dict:
             sys.exit()
 
 
-def ip_port_input(option: str) -> tuple:
-    """
-    The function asks for IP address and port number for connection.
-    """
+def ip_port_input(option: str) -> tuple[str, int]:
+    """Ask for IP address and port number for connection."""
     while True:
         try:
             if option == "telnet":
@@ -88,7 +80,6 @@ def ip_port_input(option: str) -> tuple:
                     print("\n\n*** Closing the script... ***\n")
                     sys.exit()
                 if ip_port_socket == "":
-                    # All available interfaces and default NMEA port.
                     return (DEFAULT_LOCAL_IP, DEFAULT_NMEA_PORT)
             elif option == "stream":
                 print(
@@ -101,8 +92,6 @@ def ip_port_input(option: str) -> tuple:
                     sys.exit()
                 if ip_port_socket == "":
                     return (DEFAULT_REMOTE_IP, DEFAULT_NMEA_PORT)
-            # Regex matchs only unicast IP addr from range 0.0.0.0 - 223.255.255.255
-            # and port numbers from range 1 - 65535.
             ip_port_regex_pattern = re.compile(
                 r"""^(
                 ((22[0-3]\.|2[0-1][0-9]\.|1[0-9]{2}\.|[0-9]{1,2}\.)  # 1st octet
@@ -115,7 +104,6 @@ def ip_port_input(option: str) -> tuple:
             )
             mo = ip_port_regex_pattern.fullmatch(ip_port_socket)
             if mo:
-                # return tuple with IP address (str) and port number (int).
                 return (mo.group(2), int(mo.group(6)))
             print("\n\nError: Wrong format use - 192.168.10.10:2020.")
         except KeyboardInterrupt:
@@ -124,9 +112,7 @@ def ip_port_input(option: str) -> tuple:
 
 
 def trans_proto_input() -> str:
-    """
-    The function asks for transport protocol for NMEA stream.
-    """
+    """Ask for transport protocol for NMEA stream."""
     while True:
         try:
             print("\n### Enter transport protocol - TCP or UDP [TCP]: ###")
@@ -145,9 +131,7 @@ def trans_proto_input() -> str:
 
 
 def heading_input() -> float:
-    """
-    The function asks for the unit's course.
-    """
+    """Ask for the unit's course."""
     while True:
         try:
             print(
@@ -170,9 +154,7 @@ def heading_input() -> float:
 
 
 def speed_input() -> float:
-    """
-    The function asks for the unit's speed.
-    """
+    """Ask for the unit's speed."""
     while True:
         try:
             print(
@@ -197,10 +179,8 @@ def speed_input() -> float:
             sys.exit()
 
 
-def heading_speed_input() -> tuple:
-    """
-    The function asks for the unit's heading and speed (online).
-    """
+def heading_speed_input() -> tuple[float, float]:
+    """Ask for the unit's heading and speed (online)."""
     try:
         while True:
             try:
@@ -233,24 +213,23 @@ def heading_speed_input() -> tuple:
         sys.exit()
 
 
-def serial_config_input() -> dict:
-    """
-    The function asks for serial configuration.
-    """
-    # serial_port = '/dev/ttyUSB0'
-    # Dict with all serial port settings.
-    serial_set = {"bytesize": 8, "parity": "N", "stopbits": 1, "timeout": 1}
+def serial_config_input() -> dict[str, str | int]:
+    """Ask for serial configuration."""
+    serial_set: dict[str, str | int] = {
+        "bytesize": 8,
+        "parity": "N",
+        "stopbits": 1,
+        "timeout": 1,
+    }
 
-    # List of available serial ports.
-    ports_connected = serial.tools.list_ports.comports(include_links=False)
-    # List of available serial port's names.
-    ports_connected_names = [port.device for port in ports_connected]
+    ports_connected: list[serial.tools.list_ports_common.ListPortInfo] = (
+        serial.tools.list_ports.comports(include_links=False)
+    )
+    ports_connected_names: list[str] = [port.device for port in ports_connected]
     print("\n### Connected Serial Ports: ###")
     for port in sorted(ports_connected):
         print(f"   - {port}")
-    # Check OS platform.
-    platform_os = platform.system()
-    # Asks for serial port name and checks the name validity.
+    platform_os: str = platform.system()
     while True:
         if platform_os.lower() == "linux":
             print("\n### Choose Serial Port [/dev/ttyUSB0]: ###")
@@ -276,7 +255,6 @@ def serial_config_input() -> dict:
                 break
         print(f"\nError: '{serial_set['port']}' is wrong port's name.")
 
-    # Serial port settings:
     while True:
         print(f"\n### Enter serial baudrate [{DEFAULT_SERIAL_BAUDRATE}]: ###")
         try:
