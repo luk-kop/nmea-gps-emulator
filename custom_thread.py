@@ -9,6 +9,7 @@ import uuid
 import serial.tools.list_ports
 
 from utils import exit_script
+from constants import MAX_TCP_CONNECTIONS, NMEA_SENTENCE_DELAY_SEC
 
 
 def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> None:
@@ -25,11 +26,9 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> No
             exit_script()
             # sys.exit()
         # Start listening on socket
-        s.listen(10)
+        s.listen(MAX_TCP_CONNECTIONS)
         print(f"\n*** Server listening on {srv_ip_address}:{srv_port}... ***\n")
         while True:
-            # Number of allowed connections to TCP server.
-            max_threads = 10
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
             conn, ip_add = s.accept()
@@ -44,7 +43,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: str, nmea_obj) -> No
                         if thread_name.startswith("nmea_srv")
                     ]
                 )
-                < max_threads
+                < MAX_TCP_CONNECTIONS
             ):
                 nmea_srv_thread = NmeaSrvThread(
                     name=f"nmea_srv{uuid.uuid4().hex}",
@@ -111,7 +110,7 @@ class NmeaSrvThread(threading.Thread):
                 try:
                     for nmea in nmea_list:
                         self.conn.sendall(nmea.encode())
-                        time.sleep(0.05)
+                        time.sleep(NMEA_SENTENCE_DELAY_SEC)
                 except (BrokenPipeError, OSError):
                     self.conn.close()
                     # print(f'\n*** Connection closed with {self.ip_add[0]}:{self.ip_add[1]} ***')
@@ -154,7 +153,7 @@ class NmeaStreamThread(NmeaSrvThread):
                             nmea_list = [f"{_}" for _ in next(self.nmea_object)]
                             for nmea in nmea_list:
                                 s.send(nmea.encode())
-                                time.sleep(0.05)
+                                time.sleep(NMEA_SENTENCE_DELAY_SEC)
                             # Start next loop after 1 sec
                         time.sleep(1 - (time.perf_counter() - timer_start))
             except (
@@ -184,7 +183,7 @@ class NmeaStreamThread(NmeaSrvThread):
                         for nmea in nmea_list:
                             try:
                                 s.sendto(nmea.encode(), (self.ip_add, self.port))
-                                time.sleep(0.05)
+                                time.sleep(NMEA_SENTENCE_DELAY_SEC)
                             except OSError as err:
                                 print(f"*** Error: {err.strerror} ***")
                                 exit_script()
@@ -230,7 +229,7 @@ class NmeaSerialThread(NmeaSrvThread):
                         nmea_list = [f"{_}" for _ in next(self.nmea_object)]
                         for nmea in nmea_list:
                             ser.write(str.encode(nmea))
-                            time.sleep(0.05)
+                            time.sleep(NMEA_SENTENCE_DELAY_SEC)
                     time.sleep(1 - (time.perf_counter() - timer_start))
         except serial.serialutil.SerialException as error:
             # Remove error number from output [...]

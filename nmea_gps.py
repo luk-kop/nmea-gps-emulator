@@ -5,6 +5,17 @@ from typing import Union
 
 from pyproj import Geod
 
+from constants import (
+    HEADING_INCREMENT_DEG,
+    SPEED_INCREMENT_KNOTS,
+    MAX_HEADING_DEG,
+    DEFAULT_HDOP,
+    DEFAULT_PDOP,
+    DEFAULT_VDOP,
+    DEFAULT_ANTENNA_ALTITUDE_MSL,
+    DEFAULT_SATELLITES,
+)
+
 
 class NmeaMsg:
     """
@@ -13,7 +24,7 @@ class NmeaMsg:
 
     def __init__(self, position: dict, altitude: float, speed: float, heading: float):
         # Instance attributes
-        self.utc_date_time = datetime.datetime.now(datetime.timezone.utc)
+        self.utc_date_time = datetime.datetime.now(datetime.UTC)
         self.position = position
         self.speed = speed
         # The unit's speed provided by the user during the operation of the script
@@ -22,14 +33,14 @@ class NmeaMsg:
         # The unit's heading provided by the user during the operation of the script
         self.heading_targeted = heading
         # NMEA sentences initialization - by default with 15 sats
-        self.gpgsv_group = GpgsvGroup()
+        self.gpgsv_group = GpgsvGroup(sats_total=DEFAULT_SATELLITES)
         self.gpgsa = Gpgsa(gpgsv_group=self.gpgsv_group)
         self.gga = Gpgga(
             sats_count=self.gpgsa.sats_count,
             utc_date_time=self.utc_date_time,
             position=position,
             altitude=altitude,
-            antenna_altitude_above_msl=32.5,
+            antenna_altitude_above_msl=DEFAULT_ANTENNA_ALTITUDE_MSL,
         )
         self.gpgll = Gpgll(utc_date_time=self.utc_date_time, position=position)
         self.gprmc = Gprmc(
@@ -51,7 +62,7 @@ class NmeaMsg:
 
     def __next__(self):
         utc_date_time_prev = self.utc_date_time
-        self.utc_date_time = datetime.datetime.now(datetime.timezone.utc)
+        self.utc_date_time = datetime.datetime.now(datetime.UTC)
         if self.speed > 0:
             self.position_update(utc_date_time_prev)
         if self.heading != self.heading_targeted:
@@ -147,42 +158,40 @@ class NmeaMsg:
         head_target = self.heading_targeted
         head_current = self.heading
         turn_angle = head_target - head_current
-        # Heading increment in each position update
-        head_increment = 3
         # Immediate change of course when the increment <= turn_angle
-        if abs(turn_angle) <= head_increment:
+        if abs(turn_angle) <= HEADING_INCREMENT_DEG:
             head_current = head_target
         else:
-            # The unit's heading is increased gradually (with 'head_increment')
+            # The unit's heading is increased gradually
             if head_target > head_current:
                 if abs(turn_angle) > 180:
                     if turn_angle > 0:
-                        head_current -= head_increment
+                        head_current -= HEADING_INCREMENT_DEG
                     else:
-                        head_current += head_increment
+                        head_current += HEADING_INCREMENT_DEG
                 else:
                     if turn_angle > 0:
-                        head_current += head_increment
+                        head_current += HEADING_INCREMENT_DEG
                     else:
-                        head_current -= head_increment
+                        head_current -= HEADING_INCREMENT_DEG
             else:
                 if abs(turn_angle) > 180:
                     if turn_angle > 0:
-                        head_current -= head_increment
+                        head_current -= HEADING_INCREMENT_DEG
                     else:
-                        head_current += head_increment
+                        head_current += HEADING_INCREMENT_DEG
                 else:
                     if turn_angle > 0:
-                        head_current += head_increment
+                        head_current += HEADING_INCREMENT_DEG
                     else:
-                        head_current -= head_increment
+                        head_current -= HEADING_INCREMENT_DEG
         # Heading range: 0-359
-        if head_current == 360:
+        if head_current == MAX_HEADING_DEG:
             head_current = 0
-        elif head_current > 360:
-            head_current -= 360
+        elif head_current > MAX_HEADING_DEG:
+            head_current -= MAX_HEADING_DEG
         elif head_current < 0:
-            head_current += 360
+            head_current += MAX_HEADING_DEG
         self.heading = round(head_current, 1)
 
     def _speed_update(self):
@@ -192,15 +201,13 @@ class NmeaMsg:
         speed_target = self.speed_targeted
         speed_current = self.speed
         speed_diff = speed_target - speed_current
-        # Heading increment in each position update
-        speed_increment = 3
-        # Immediate change of course when the increment <= turn_angle
-        if abs(speed_diff) <= speed_increment:
+        # Immediate change of speed when the increment <= speed_diff
+        if abs(speed_diff) <= SPEED_INCREMENT_KNOTS:
             speed_current = speed_target
         elif speed_target > speed_current:
-            speed_current += speed_increment
+            speed_current += SPEED_INCREMENT_KNOTS
         else:
-            speed_current -= speed_increment
+            speed_current -= SPEED_INCREMENT_KNOTS
         self.speed = round(speed_current, 3)
 
     @staticmethod
@@ -236,9 +243,9 @@ class Gpgga:
         utc_date_time,
         position,
         altitude,
-        antenna_altitude_above_msl=32.5,
+        antenna_altitude_above_msl=DEFAULT_ANTENNA_ALTITUDE_MSL,
         fix_quality=1,
-        hdop=0.92,
+        hdop=DEFAULT_HDOP,
         dgps_last_update="",
         dgps_ref_station_id="",
     ):
@@ -376,7 +383,13 @@ class Gpgsa:
     sentence_id: str = "GPGSA"
 
     def __init__(
-        self, gpgsv_group, select_mode="A", mode=3, pdop=1.56, hdop=0.92, vdop=1.25
+        self,
+        gpgsv_group,
+        select_mode="A",
+        mode=3,
+        pdop=DEFAULT_PDOP,
+        hdop=DEFAULT_HDOP,
+        vdop=DEFAULT_VDOP,
     ):
         self.select_mode = select_mode
         self.mode = mode

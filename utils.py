@@ -7,6 +7,17 @@ import platform
 import psutil
 import serial.tools.list_ports
 
+from constants import (
+    DEFAULT_NMEA_PORT,
+    DEFAULT_LOCAL_IP,
+    DEFAULT_REMOTE_IP,
+    DEFAULT_POSITION,
+    DEFAULT_HEADING,
+    DEFAULT_SPEED,
+    DEFAULT_SERIAL_BAUDRATE,
+    SUPPORTED_BAUDRATES,
+)
+
 
 def exit_script():
     """
@@ -34,13 +45,7 @@ def position_input() -> dict:
                 sys.exit()
             if position_data == "":
                 # Default position
-                position_dict = {
-                    "latitude_value": "5430.000",
-                    "latitude_direction": "N",
-                    "longitude_value": "01920.000",
-                    "longitude_direction": "E",
-                }
-                return position_dict
+                return DEFAULT_POSITION.copy()
             position_regex_pattern = re.compile(
                 r"""^(
                 ([0-8]\d[0-5]\d|9000)                               # Latitude
@@ -75,7 +80,7 @@ def ip_port_input(option: str) -> tuple:
         try:
             if option == "telnet":
                 print(
-                    "\n### Enter Local IP address and port number [0.0.0.0:10110]: ###"
+                    f"\n### Enter Local IP address and port number [{DEFAULT_LOCAL_IP}:{DEFAULT_NMEA_PORT}]: ###"
                 )
                 try:
                     ip_port_socket = input(">>> ")
@@ -84,10 +89,10 @@ def ip_port_input(option: str) -> tuple:
                     sys.exit()
                 if ip_port_socket == "":
                     # All available interfaces and default NMEA port.
-                    return ("0.0.0.0", 10110)
+                    return (DEFAULT_LOCAL_IP, DEFAULT_NMEA_PORT)
             elif option == "stream":
                 print(
-                    "\n### Enter Remote IP address and port number [127.0.0.1:10110]: ###"
+                    f"\n### Enter Remote IP address and port number [{DEFAULT_REMOTE_IP}:{DEFAULT_NMEA_PORT}]: ###"
                 )
                 try:
                     ip_port_socket = input(">>> ")
@@ -95,7 +100,7 @@ def ip_port_input(option: str) -> tuple:
                     print("\n\n*** Closing the script... ***\n")
                     sys.exit()
                 if ip_port_socket == "":
-                    return ("127.0.0.1", 10110)
+                    return (DEFAULT_REMOTE_IP, DEFAULT_NMEA_PORT)
             # Regex matchs only unicast IP addr from range 0.0.0.0 - 223.255.255.255
             # and port numbers from range 1 - 65535.
             ip_port_regex_pattern = re.compile(
@@ -104,7 +109,7 @@ def ip_port_input(option: str) -> tuple:
                 (25[0-5]\.|2[0-4][0-9]\.|1[0-9]{2}\.|[0-9]{1,2}\.){2}  # 2nd and 3th octet
                 (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2}))            # 4th octet
                 :
-                ([1-9][0-9]{0,3}|[1-6][0-5]{2}[0-3][0-5])   # port number
+                (6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})   # port number 1-65535
                 )$""",
                 re.VERBOSE,
             )
@@ -145,14 +150,16 @@ def heading_input() -> float:
     """
     while True:
         try:
-            print("\n### Enter unit course - range 000-359 [090]: ###")
+            print(
+                f"\n### Enter unit course - range 000-359 [{int(DEFAULT_HEADING):03d}]: ###"
+            )
             try:
                 heading_data = input(">>> ")
             except KeyboardInterrupt:
                 print("\n\n*** Closing the script... ***\n")
                 sys.exit()
             if heading_data == "":
-                return 90.0
+                return DEFAULT_HEADING
             heading_regex_pattern = r"(3[0-5]\d|[0-2]\d{2}|\d{1,2})"
             mo = re.fullmatch(heading_regex_pattern, heading_data)
             if mo:
@@ -168,14 +175,16 @@ def speed_input() -> float:
     """
     while True:
         try:
-            print("\n### Enter unit speed in knots - range 0-999 [10.5]: ###")
+            print(
+                f"\n### Enter unit speed in knots - range 0-999 [{DEFAULT_SPEED}]: ###"
+            )
             try:
                 speed_data = input(">>> ")
             except KeyboardInterrupt:
                 print("\n\n*** Closing the script... ***\n")
                 sys.exit()
             if speed_data == "":
-                return 10.500
+                return DEFAULT_SPEED
             speed_regex_pattern = r"(\d{1,3}(\.\d)?)"
             mo = re.fullmatch(speed_regex_pattern, speed_data)
             if mo:
@@ -268,30 +277,16 @@ def serial_config_input() -> dict:
         print(f"\nError: '{serial_set['port']}' is wrong port's name.")
 
     # Serial port settings:
-    baudrate_list = [
-        "300",
-        "600",
-        "1200",
-        "2400",
-        "4800",
-        "9600",
-        "14400",
-        "19200",
-        "38400",
-        "57600",
-        "115200",
-        "128000",
-    ]
     while True:
-        print("\n### Enter serial baudrate [9600]: ###")
+        print(f"\n### Enter serial baudrate [{DEFAULT_SERIAL_BAUDRATE}]: ###")
         try:
             serial_set["baudrate"] = input(">>> ")
         except KeyboardInterrupt:
             print("\n\n*** Closing the script... ***\n")
             sys.exit()
         if serial_set["baudrate"] == "":
-            serial_set["baudrate"] = 9600
-        if str(serial_set["baudrate"]) in baudrate_list:
+            serial_set["baudrate"] = DEFAULT_SERIAL_BAUDRATE
+        if str(serial_set["baudrate"]) in SUPPORTED_BAUDRATES:
             break
         print(f"\n*** Error: '{serial_set['baudrate']}' is wrong port's baudrate. ***")
     return serial_set

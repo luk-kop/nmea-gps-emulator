@@ -21,15 +21,3 @@ repos:
       args: [ --fix ]
     # Run the formatter.
     - id: ruff-format
-- repo: https://github.com/antonbabenko/pre-commit-terraform
-  rev: v1.104.0
-  hooks:
-    - id: terraform_fmt
-    - id: terraform_docs
-      args:
-        - --hook-config=--path-to-file=README.md
-        - --hook-config=--create-file-if-not-exist=true
-    - id: terraform_tflint
-    - id: terraform_trivy
-      args:
-        - --args=--severity HIGH,CRITICAL
