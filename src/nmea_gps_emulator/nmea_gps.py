@@ -6,15 +6,15 @@ from math import ceil
 
 from pyproj import Geod
 
-from constants import (
-    HEADING_INCREMENT_DEG,
-    SPEED_INCREMENT_KNOTS,
-    MAX_HEADING_DEG,
+from .constants import (
+    DEFAULT_ANTENNA_ALTITUDE_MSL,
     DEFAULT_HDOP,
     DEFAULT_PDOP,
-    DEFAULT_VDOP,
-    DEFAULT_ANTENNA_ALTITUDE_MSL,
     DEFAULT_SATELLITES,
+    DEFAULT_VDOP,
+    HEADING_INCREMENT_DEG,
+    MAX_HEADING_DEG,
+    SPEED_INCREMENT_KNOTS,
 )
 
 
@@ -52,9 +52,7 @@ class NmeaMsg:
         self.gphdt: Gphdt = Gphdt(heading=heading)
         self.gpvtg: Gpvtg = Gpvtg(heading_true=heading, sog_knots=speed)
         self.gpzda: Gpzda = Gpzda(utc_date_time=self.utc_date_time)
-        self.nmea_sentences: list[
-            Gpgga | Gpgsa | Gpgsv | Gpgll | Gprmc | Gphdt | Gpvtg | Gpzda
-        ] = [
+        self.nmea_sentences: list[Gpgga | Gpgsa | Gpgsv | Gpgll | Gprmc | Gphdt | Gpvtg | Gpzda] = [
             self.gga,
             self.gpgsa,
             *[gpgsv for gpgsv in self.gpgsv_group.gpgsv_instances],
@@ -87,7 +85,7 @@ class NmeaMsg:
         self.gpzda.utc_time = self.utc_date_time
         return self.nmea_sentences
 
-    def __iter__(self) -> "NmeaMsg":
+    def __iter__(self) -> NmeaMsg:
         return self
 
     def __str__(self) -> str:
@@ -123,9 +121,7 @@ class NmeaMsg:
         # Use WGS84 ellipsoid.
         g = Geod(ellps="WGS84")
         # Forward transformation - returns longitude, latitude, back azimuth of terminus points
-        lon_end, lat_end, back_azimuth = g.fwd(
-            lon_start, lat_start, self.heading, distance
-        )
+        lon_end, lat_end, back_azimuth = g.fwd(lon_start, lat_start, self.heading, distance)
         # Change direction when cross the equator or prime meridian (Greenwich)
         if lat_end >= 0:
             lat_direction = "N"
@@ -397,7 +393,7 @@ class Gpgsa:
 
     def __init__(
         self,
-        gpgsv_group: "GpgsvGroup",
+        gpgsv_group: GpgsvGroup,
         select_mode: str = "A",
         mode: int = 3,
         pdop: float = DEFAULT_PDOP,
@@ -460,9 +456,7 @@ class GpgsvGroup:
                 and self.sats_total % self.sats_in_sentence != 0
             ):
                 self.sats_in_sentence = self.sats_total % self.sats_in_sentence
-            sats_ids_sentence = [
-                next(sats_ids_iter) for _ in range(self.sats_in_sentence)
-            ]
+            sats_ids_sentence = [next(sats_ids_iter) for _ in range(self.sats_in_sentence)]
             gpgsv_sentence = Gpgsv(
                 sats_total=self.sats_total,
                 sats_in_sentence=self.sats_in_sentence,
@@ -517,9 +511,7 @@ class Gpgsv:
             elevation: int = random.randint(0, 90)
             azimuth: int = random.randint(0, 359)
             snr: int = random.randint(0, 99)
-            self.sats_details += (
-                f",{satellite_id},{elevation:02d},{azimuth:03d},{snr:02d}"
-            )
+            self.sats_details += f",{satellite_id},{elevation:02d},{azimuth:03d},{snr:02d}"
 
     def __str__(self) -> str:
         nmea_output = (

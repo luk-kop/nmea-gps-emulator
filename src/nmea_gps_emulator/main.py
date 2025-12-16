@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import logging
 import sys
 import threading
 import time
@@ -8,9 +7,9 @@ import uuid
 from collections.abc import Callable
 from typing import NoReturn
 
-from custom_thread import NmeaSerialThread, NmeaStreamThread, run_telnet_server_thread
-from nmea_gps import NmeaMsg
-from utils import (
+from .custom_thread import NmeaSerialThread, NmeaStreamThread, run_telnet_server_thread
+from .nmea_gps import NmeaMsg
+from .utils import (
     heading_input,
     heading_speed_input,
     ip_port_input,
@@ -179,11 +178,3 @@ class Menu:
         Exit script.
         """
         sys.exit(0)
-
-
-if __name__ == "__main__":
-    # Logging config
-    log_format = "%(asctime)s: %(message)s"
-    logging.basicConfig(format=log_format, level=logging.INFO, datefmt="%H:%M:%S")
-
-    Menu().run()

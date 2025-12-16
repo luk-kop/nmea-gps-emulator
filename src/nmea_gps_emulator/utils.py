@@ -8,14 +8,14 @@ import psutil
 import serial.tools.list_ports
 import serial.tools.list_ports_common
 
-from constants import (
-    DEFAULT_NMEA_PORT,
-    DEFAULT_LOCAL_IP,
-    DEFAULT_REMOTE_IP,
-    DEFAULT_POSITION,
+from .constants import (
     DEFAULT_HEADING,
-    DEFAULT_SPEED,
+    DEFAULT_LOCAL_IP,
+    DEFAULT_NMEA_PORT,
+    DEFAULT_POSITION,
+    DEFAULT_REMOTE_IP,
     DEFAULT_SERIAL_BAUDRATE,
+    DEFAULT_SPEED,
     SUPPORTED_BAUDRATES,
 )
 
@@ -134,9 +134,7 @@ def heading_input() -> float:
     """Ask for the unit's course."""
     while True:
         try:
-            print(
-                f"\n### Enter unit course - range 000-359 [{int(DEFAULT_HEADING):03d}]: ###"
-            )
+            print(f"\n### Enter unit course - range 000-359 [{int(DEFAULT_HEADING):03d}]: ###")
             try:
                 heading_data = input(">>> ")
             except KeyboardInterrupt:
@@ -157,9 +155,7 @@ def speed_input() -> float:
     """Ask for the unit's speed."""
     while True:
         try:
-            print(
-                f"\n### Enter unit speed in knots - range 0-999 [{DEFAULT_SPEED}]: ###"
-            )
+            print(f"\n### Enter unit speed in knots - range 0-999 [{DEFAULT_SPEED}]: ###")
             try:
                 speed_data = input(">>> ")
             except KeyboardInterrupt:

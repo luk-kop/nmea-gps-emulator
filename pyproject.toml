@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nmea-gps-emulator"
+version = "1.0.0"
+description = "A GPS receiver emulator that generates NMEA 0183 sentences"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "luk-kop" },
+]
+keywords = ["nmea", "gps", "emulator", "navigation", "simulation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: System :: Emulators",
+]
+dependencies = [
+    "psutil>=7.1",
+    "pyproj>=3.7",
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pre-commit",
+]
+
+[project.scripts]
+nmea-gps-emulator = "nmea_gps_emulator.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/luk-kop/nmea-gps-emulator"
+Repository = "https://github.com/luk-kop/nmea-gps-emulator"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]

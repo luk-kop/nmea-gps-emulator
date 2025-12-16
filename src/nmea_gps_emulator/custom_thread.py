@@ -10,14 +10,12 @@ from typing import Any, NoReturn
 import serial
 import serial.tools.list_ports
 
-from constants import MAX_TCP_CONNECTIONS, NMEA_SENTENCE_DELAY_SEC
-from nmea_gps import NmeaMsg
-from utils import exit_script
+from .constants import MAX_TCP_CONNECTIONS, NMEA_SENTENCE_DELAY_SEC
+from .nmea_gps import NmeaMsg
+from .utils import exit_script
 
 
-def run_telnet_server_thread(
-    srv_ip_address: str, srv_port: int, nmea_obj: NmeaMsg
-) -> NoReturn:
+def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaMsg) -> NoReturn:
     """
     Function starts thread with TCP (telnet) server sending NMEA data to connected client (clients).
     """
@@ -25,7 +23,7 @@ def run_telnet_server_thread(
         # Bind socket to local host and port.
         try:
             s.bind((srv_ip_address, srv_port))
-        except socket.error as err:
+        except OSError as err:
             print(f"\n*** Bind failed. Error: {err.strerror}. ***")
             print("Change IP/port settings or try again in next 2 minutes.")
             exit_script()
@@ -126,9 +124,7 @@ class NmeaSrvThread(threading.Thread):
                 except (BrokenPipeError, OSError):
                     self.conn.close()
                     # print(f'\n*** Connection closed with {self.ip_add[0]}:{self.ip_add[1]} ***')
-                    logging.info(
-                        f"Connection closed with {self.ip_add[0]}:{self.ip_add[1]}"
-                    )
+                    logging.info(f"Connection closed with {self.ip_add[0]}:{self.ip_add[1]}")
                     # Close thread
                     sys.exit()
             time.sleep(max(1 - (time.perf_counter() - timer_start), 0))
@@ -178,9 +174,7 @@ class NmeaStreamThread(NmeaSrvThread):
                 exit_script()
         elif self.proto == "udp":
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                print(
-                    f"\n*** Sending NMEA data - UDP stream to {self.ip_add}:{self.port}... ***\n"
-                )
+                print(f"\n*** Sending NMEA data - UDP stream to {self.ip_add}:{self.port}... ***\n")
                 while True:
                     timer_start = time.perf_counter()
                     with self._lock:
@@ -208,9 +202,7 @@ class NmeaSerialThread(NmeaSrvThread):
     A class that represents a thread dedicated for serial connection.
     """
 
-    def __init__(
-        self, serial_config: dict[str, str | int], *args: Any, **kwargs: Any
-    ) -> None:
+    def __init__(self, serial_config: dict[str, str | int], *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.serial_config: dict[str, str | int] = serial_config
 
@@ -248,10 +240,7 @@ class NmeaSerialThread(NmeaSrvThread):
         except serial.serialutil.SerialException as error:
             # Remove error number from output [...]
             error_formatted = (
-                re.sub(r"\[(.*?)\]", "", str(error))
-                .strip()
-                .replace("  ", " ")
-                .capitalize()
+                re.sub(r"\[(.*?)\]", "", str(error)).strip().replace("  ", " ").capitalize()
             )
             logging.error(
                 f"{error_formatted}. Please try 'sudo chmod a+rw {self.serial_config['port']}'"

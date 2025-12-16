@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime
 from unittest import mock
 
-from nmea_gps import Gpgga, Gpgll, GpgsvGroup, Gphdt, Gprmc, Gpzda, NmeaMsg
+from nmea_gps_emulator.nmea_gps import Gpgga, Gpgll, GpgsvGroup, Gphdt, Gprmc, Gpzda, NmeaMsg
 
 
 class TestNmeaGps(unittest.TestCase):
@@ -23,16 +23,12 @@ class TestNmeaGps(unittest.TestCase):
         }
 
     def test_checksum(self) -> None:
-        test_data = (
-            "GPRMC,095940.000,A,5432.216088,N,01832.664132,E,0.019,0.00,130720,,,A"
-        )
+        test_data = "GPRMC,095940.000,A,5432.216088,N,01832.664132,E,0.019,0.00,130720,,,A"
         check_sum = NmeaMsg.check_sum(test_data)
         self.assertEqual(check_sum, "59")
 
     def test_gprmc_str(self) -> None:
-        expected = (
-            "$GPRMC,120944.000,A,5425.123,N,01832.664,E,12.300,123.1,090321,,,A*56\r\n"
-        )
+        expected = "$GPRMC,120944.000,A,5425.123,N,01832.664,E,12.300,123.1,090321,,,A*56\r\n"
         test_obj = Gprmc(
             utc_date_time=self.time,
             position=self.position,
@@ -42,9 +38,7 @@ class TestNmeaGps(unittest.TestCase):
         self.assertEqual(test_obj.__str__(), expected)
 
     def test_gpgga_str(self) -> None:
-        expected = (
-            "$GPGGA,120944.00,5425.123,N,01832.664,E,1,12,0.92,15.2,M,32.5,M,,*66\r\n"
-        )
+        expected = "$GPGGA,120944.00,5425.123,N,01832.664,E,1,12,0.92,15.2,M,32.5,M,,*66\r\n"
         test_obj = Gpgga(
             sats_count=12,
             utc_date_time=self.time,
