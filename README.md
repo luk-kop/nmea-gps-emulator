@@ -68,19 +68,32 @@ On Linux systems you will probably need to change the permissions for the device
 sudo chmod a+rw /dev/ttyUSB0
 ```
 
-### Installation with venv
-The script can be build and run locally with virtualenv tool. Run following commands in order to create virtual environment and install the required packages.
+### Installation
+
+#### Option 1: Install from wheel file (Recommended)
 ```bash
-virtualenv venv
-# or
+pip install nmea_gps_emulator-1.0.0-py3-none-any.whl
+```
+
+#### Option 2: Development installation
+```bash
+git clone https://github.com/luk-kop/nmea-gps-emulator.git
+cd nmea-gps-emulator
 python3.12 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
-### Running the script
-You can start the script using the following command:
+
+### Running the application
+
+#### If installed from wheel file:
 ```bash
-python main.py
+nmea-gps-emulator
+```
+
+#### If using development installation:
+```bash
+python -m nmea_gps_emulator
 ```
 After starting the script correctly, the following prompt should appear in the OS console:
 

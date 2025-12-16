@@ -1,3 +1,0 @@
-psutil~=7.1
-pyproj~=3.7
-pyserial~=3.5
