@@ -1,3 +1,5 @@
+"""Utility functions for user input handling and script management."""
+
 import os
 import platform
 import re
@@ -22,13 +24,21 @@ from .constants import (
 
 
 def handle_keyboard_interrupt() -> NoReturn:
-    """Handle KeyboardInterrupt by printing a message and exiting."""
+    """Handle KeyboardInterrupt by printing a closing message and exiting.
+
+    This function provides a consistent way to handle user interrupts
+    (Ctrl+C) throughout the application.
+    """
     print("\n\n*** Closing the script... ***\n")
     sys.exit()
 
 
 def exit_script() -> None:
-    """Terminate the script (main thread) from inside a child thread."""
+    """Terminate the script from inside a child thread.
+
+    Uses psutil to terminate the main process, allowing child threads
+    to gracefully shut down the application.
+    """
     current_script_pid: int = os.getpid()
     current_script: psutil.Process = psutil.Process(current_script_pid)
     print("*** Closing the script... ***\n")
@@ -37,7 +47,14 @@ def exit_script() -> None:
 
 
 def position_input() -> dict[str, str]:
-    """Ask for position and validate entry data. Returns position dict."""
+    """Prompt user for GPS position and validate the input.
+
+    Returns:
+        Dictionary with keys: latitude_value, latitude_direction,
+        longitude_value, longitude_direction. Returns DEFAULT_POSITION
+        if user presses Enter without input.
+
+    """
     while True:
         try:
             print("\n### Enter unit position (format - 5430N 01920E): ###")

@@ -1,3 +1,5 @@
+"""Custom threading classes for NMEA GPS emulator connections."""
+
 import logging
 import re
 import socket
@@ -16,9 +18,7 @@ from .utils import exit_script
 
 
 def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaMsg) -> NoReturn:
-    """
-    Function starts thread with TCP (telnet) server sending NMEA data to connected client (clients).
-    """
+    """Start TCP (telnet) server thread sending NMEA data to connected clients."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # Bind socket to local host and port.
         try:
@@ -64,9 +64,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaM
 
 
 class NmeaSrvThread(threading.Thread):
-    """
-    A class that represents a thread dedicated for TCP (telnet) server-client connection.
-    """
+    """A thread dedicated for TCP (telnet) server-client connection."""
 
     def __init__(
         self,
@@ -87,14 +85,17 @@ class NmeaSrvThread(threading.Thread):
         self._lock: threading.RLock = threading.RLock()
 
     def set_speed(self, speed: float) -> None:
+        """Set the target speed for the NMEA object."""
         with self._lock:
             self.speed = speed
 
     def set_heading(self, heading: float) -> None:
+        """Set the target heading for the NMEA object."""
         with self._lock:
             self.heading = heading
 
     def run(self) -> None:
+        """Execute main thread loop for sending NMEA data."""
         while True:
             timer_start = time.perf_counter()
             with self._lock:
@@ -131,9 +132,7 @@ class NmeaSrvThread(threading.Thread):
 
 
 class NmeaStreamThread(NmeaSrvThread):
-    """
-    A class that represents a thread dedicated for TCP or UDP stream connection.
-    """
+    """A thread dedicated for TCP or UDP stream connection."""
 
     def __init__(self, proto: str, port: int, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -141,6 +140,7 @@ class NmeaStreamThread(NmeaSrvThread):
         self.port: int = port
 
     def run(self) -> None:
+        """Execute TCP or UDP stream connection."""
         if self.proto == "tcp":
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -198,15 +198,14 @@ class NmeaStreamThread(NmeaSrvThread):
 
 
 class NmeaSerialThread(NmeaSrvThread):
-    """
-    A class that represents a thread dedicated for serial connection.
-    """
+    """A thread dedicated for serial connection."""
 
     def __init__(self, serial_config: dict[str, str | int], *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.serial_config: dict[str, str | int] = serial_config
 
     def run(self) -> None:
+        """Execute serial connection for NMEA data transmission."""
         # Open serial port.
         try:
             with serial.Serial(

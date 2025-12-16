@@ -1,3 +1,5 @@
+"""NMEA GPS message generation and handling classes."""
+
 from __future__ import annotations
 
 import datetime
@@ -19,13 +21,12 @@ from .constants import (
 
 
 class NmeaMsg:
-    """
-    The class represent a group of NMEA sentences.
-    """
+    """The class represent a group of NMEA sentences."""
 
     def __init__(
         self, position: dict[str, str], altitude: float, speed: float, heading: float
     ) -> None:
+        """Initialize NMEA message generator with position, altitude, speed, and heading."""
         # Instance attributes
         self.utc_date_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
         self.position: dict[str, str] = position
@@ -66,6 +67,7 @@ class NmeaMsg:
     def __next__(
         self,
     ) -> list[Gpgga | Gpgsa | Gpgsv | Gpgll | Gprmc | Gphdt | Gpvtg | Gpzda]:
+        """Generate next set of NMEA sentences with updated position and parameters."""
         utc_date_time_prev = self.utc_date_time
         self.utc_date_time = datetime.datetime.now(datetime.UTC)
         if self.speed > 0:
@@ -86,18 +88,18 @@ class NmeaMsg:
         return self.nmea_sentences
 
     def __iter__(self) -> NmeaMsg:
+        """Return iterator for NMEA message generation."""
         return self
 
     def __str__(self) -> str:
+        """Return formatted string of all NMEA sentences."""
         nmea_msgs_str: str = ""
         for nmea in self.nmea_sentences:
             nmea_msgs_str += f"{nmea}"
         return nmea_msgs_str
 
     def position_update(self, utc_date_time_prev: datetime.datetime) -> None:
-        """
-        Update position when unit in move.
-        """
+        """Update position when unit in move."""
         # The time that has elapsed since the last fix
         time_delta = (self.utc_date_time - utc_date_time_prev).total_seconds()
         # Knots to m/s conversion.
@@ -155,9 +157,7 @@ class NmeaMsg:
         self.position["longitude_direction"] = f"{lon_direction.upper()}"
 
     def _heading_update(self) -> None:
-        """
-        Updates the unit's heading (course) in case of changes performed by the user.
-        """
+        """Update the unit's heading (course) when changed by user."""
         head_target: float = self.heading_targeted
         head_current: float = self.heading
         turn_angle = head_target - head_current
@@ -198,9 +198,7 @@ class NmeaMsg:
         self.heading = round(head_current, 1)
 
     def _speed_update(self) -> None:
-        """
-        Updates the unit's speed in case of changes performed by the user.
-        """
+        """Update the unit's speed when changed by user."""
         speed_target: float = self.speed_targeted
         speed_current: float = self.speed
         speed_diff: float = speed_target - speed_current
@@ -215,10 +213,10 @@ class NmeaMsg:
 
     @staticmethod
     def check_sum(data: str):
-        """
-        Function changes ASCII char to decimal representation, perform XOR operation of
-        all the bytes between the $ and the * (not including the delimiters themselves),
-        and returns NMEA check-sum in hexadecimal notation.
+        """Calculate NMEA checksum for given data string.
+
+        Performs XOR operation on all bytes between $ and * delimiters
+        and returns checksum in hexadecimal notation.
         """
         check_sum: int = 0
         for char in data:
@@ -233,9 +231,9 @@ class NmeaMsg:
 
 
 class Gpgga:
-    """
-    Global Positioning System Fix Data
-    Example: $GPGGA,140041.00,5436.70976,N,01839.98065,E,1,09,0.87,21.7,M,32.5,M,,*60\r\n
+    """Global Positioning System Fix Data.
+
+    Example: $GPGGA,140041.00,5436.70976,N,01839.98065,E,1,09,0.87,21.7,M,32.5,M,,*60
     """
 
     sentence_id: str = "GPGGA"
@@ -264,6 +262,7 @@ class Gpgga:
 
     @property
     def utc_time(self) -> str:
+        """Get UTC time in HHMMSS format."""
         return self._utc_time
 
     @utc_time.setter
@@ -283,8 +282,8 @@ class Gpgga:
 
 
 class Gpgll:
-    """
-    Position data: position fix, time of position fix, and status
+    """Position data: position fix, time of position fix, and status.
+
     Example: $GPGLL,5432.216118,N,01832.663994,E,095942.000,A,A*58
     """
 
@@ -323,8 +322,8 @@ class Gpgll:
 
 
 class Gprmc:
-    """
-    Recommended minimum specific GPS/Transit data
+    """Recommended minimum specific GPS/Transit data.
+
     Example: $GPRMC,095940.000,A,5432.216088,N,01832.664132,E,0.019,0.00,130720,,,A*59
     """
 
@@ -384,8 +383,8 @@ class Gprmc:
 
 
 class Gpgsa:
-    """
-    GPS DOP and active satellites
+    """GPS DOP and active satellites.
+
     Example: $GPGSA,A,3,19,28,14,18,27,22,31,39,,,,,1.7,1.0,1.3*35
     """
 
@@ -433,9 +432,7 @@ class Gpgsa:
 
 
 class GpgsvGroup:
-    """
-    The class initializes the relevant number of GPGSV sentences depending on the specified number of satellites.
-    """
+    """Initializes the relevant number of GPGSV sentences based on satellite count."""
 
     sats_in_sentence: int = 4
 
@@ -485,8 +482,8 @@ class GpgsvGroup:
 
 
 class Gpgsv:
-    """
-    GPS Satellites in view. During instance initialization will generate dummy (random) object's data.
+    """GPS Satellites in view with randomly generated satellite data.
+
     Example: $GPGSV,3,1,11,03,03,111,00,04,15,270,00,06,01,010,00,13,06,292,00*74
     """
 
@@ -522,8 +519,8 @@ class Gpgsv:
 
 
 class Gphdt:
-    """
-    Heading, True.
+    """Heading, True.
+
     Actual vessel heading in degrees true produced by any device or system producing true heading.
     Example: $GPHDT,274.07,T*03
     """
@@ -539,8 +536,8 @@ class Gphdt:
 
 
 class Gpvtg:
-    """
-    Track Made Good and Ground Speed.
+    """Track Made Good and Ground Speed.
+
     Example: $GPVTG,360.0,T,348.7,M,000.0,N,000.0,K*43
     """
 
@@ -558,9 +555,7 @@ class Gpvtg:
 
     @property
     def sog_kmhr(self) -> float:
-        """
-        Return speed over ground is in kilometers/hour.
-        """
+        """Return speed over ground in kilometers/hour."""
         return round(self.sog_knots * 1.852, 1)
 
     def __str__(self) -> str:
@@ -572,8 +567,8 @@ class Gpvtg:
 
 
 class Gpzda:
-    """
-    Time and date - UTC and local Time Zone
+    """Time and date - UTC and local Time Zone.
+
     Example: $GPZDA,095942.000,13,07,2020,0,0*50
     """
 

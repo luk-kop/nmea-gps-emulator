@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Main module for NMEA GPS Emulator application."""
+
 import sys
 import threading
 import time
@@ -22,9 +24,7 @@ from .utils import (
 
 
 class Menu:
-    """
-    Display a menu and respond to choices when run.
-    """
+    """Display a menu and respond to choices when run."""
 
     def __init__(self) -> None:
         self.nmea_thread: threading.Thread | None = None
@@ -37,6 +37,7 @@ class Menu:
         }
 
     def display_menu(self) -> None:
+        """Display the main menu options."""
         print(r"""
 
 ..####...#####....####...........######..##...##..##..##..##.......####...######...####...#####..
@@ -53,9 +54,7 @@ class Menu:
         print("4 - Quit")
 
     def run(self) -> None:
-        """
-        Display the menu and respond to choices.
-        """
+        """Display the menu and respond to choices."""
         self.display_menu()
         while True:
             try:
@@ -125,9 +124,7 @@ class Menu:
                 handle_keyboard_interrupt()
 
     def nmea_serial(self) -> None:
-        """
-        Runs serial which emulates NMEA server-device
-        """
+        """Run serial emulation of NMEA server device."""
         # serial_port = '/dev/ttyUSB0'
         # Serial configuration query
         serial_config = serial_config_input()
@@ -140,9 +137,7 @@ class Menu:
         self.nmea_thread.start()
 
     def nmea_tcp_server(self) -> None:
-        """
-        Runs telnet server witch emulates NMEA device.
-        """
+        """Run telnet server that emulates NMEA device."""
         # Local TCP server IP address and port number.
         srv_ip_address, srv_port = ip_port_input("telnet")
         self.nmea_thread = threading.Thread(
@@ -154,9 +149,7 @@ class Menu:
         self.nmea_thread.start()
 
     def nmea_stream(self) -> None:
-        """
-        Runs TCP or UDP NMEA stream to designated host.
-        """
+        """Run TCP or UDP NMEA stream to designated host."""
         # IP address and port number query
         ip_add, port = ip_port_input("stream")
         # Transport protocol query.
@@ -172,7 +165,5 @@ class Menu:
         self.nmea_thread.start()
 
     def quit(self) -> NoReturn:
-        """
-        Exit script.
-        """
+        """Exit script."""
         sys.exit(0)
