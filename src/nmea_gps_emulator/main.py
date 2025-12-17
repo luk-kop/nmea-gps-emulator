@@ -9,7 +9,12 @@ import uuid
 from collections.abc import Callable
 from typing import NoReturn
 
-from .custom_thread import NmeaSerialThread, NmeaStreamThread, run_telnet_server_thread
+from .custom_thread import (
+    NmeaSerialThread,
+    NmeaSrvThread,
+    NmeaStreamThread,
+    run_telnet_server_thread,
+)
 from .nmea_gps import NmeaMsg
 from .utils import (
     handle_keyboard_interrupt,
@@ -77,17 +82,17 @@ class Menu:
 
                 # Initialize NmeaMsg object
                 self.nmea_obj = NmeaMsg(
-                    position=nav_data_dict["position"],
-                    altitude=nav_data_dict["gps_altitude_amsl"],
-                    speed=nav_data_dict["gps_speed"],
-                    heading=nav_data_dict["gps_heading"],
+                    position=nav_data_dict["position"],  # type: ignore[arg-type]
+                    altitude=nav_data_dict["gps_altitude_amsl"],  # type: ignore[arg-type]
+                    speed=nav_data_dict["gps_speed"],  # type: ignore[arg-type]
+                    heading=nav_data_dict["gps_heading"],  # type: ignore[arg-type]
                 )
                 action()
                 break
         # Changing the unit's course and speed by the user in the main thread.
         first_run = True
         while True:
-            if not self.nmea_thread.is_alive():
+            if not self.nmea_thread or not self.nmea_thread.is_alive():
                 print("\n\n*** Closing the script... ***\n")
                 sys.exit()
             try:
@@ -106,15 +111,12 @@ class Menu:
                     thread_list = [
                         thread
                         for thread in threading.enumerate()
-                        if thread.name.startswith("nmea_srv")
+                        if isinstance(thread, NmeaSrvThread)
                     ]
                     if thread_list:
                         for thr in thread_list:
-                            # Update speed and heading
-                            # a = time.time()
                             thr.set_heading(new_head)
                             thr.set_speed(new_speed)
-                            # print(time.time() - a)
                     else:
                         # Set targeted head and speed without connected clients
                         self.nmea_obj.heading_targeted = new_head
