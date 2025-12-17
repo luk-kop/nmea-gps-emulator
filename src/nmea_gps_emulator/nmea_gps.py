@@ -445,7 +445,7 @@ class GpgsvGroup:
             [f"{_:02d}" for _ in range(1, 33)], k=self.sats_total
         )
         # Iterator for sentence sats IDs
-        sats_ids_iter: iter = iter(self.sats_ids)
+        sats_ids_iter = iter(self.sats_ids)
         # Initialize GPGSV sentences
         for sentence_num in range(1, self.num_of_gsv_in_group + 1):
             if (
@@ -453,7 +453,9 @@ class GpgsvGroup:
                 and self.sats_total % self.sats_in_sentence != 0
             ):
                 self.sats_in_sentence = self.sats_total % self.sats_in_sentence
-            sats_ids_sentence = [next(sats_ids_iter) for _ in range(self.sats_in_sentence)]
+            sats_ids_sentence: list[str] = [
+                next(sats_ids_iter) for _ in range(self.sats_in_sentence)
+            ]
             gpgsv_sentence = Gpgsv(
                 sats_total=self.sats_total,
                 sats_in_sentence=self.sats_in_sentence,

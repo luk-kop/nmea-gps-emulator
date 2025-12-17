@@ -120,12 +120,14 @@ class NmeaSrvThread(threading.Thread):
                     nmea_list = [f"{_}" for _ in next(self.nmea_object)]
                 try:
                     for nmea in nmea_list:
-                        self.conn.sendall(nmea.encode())
+                        if self.conn:
+                            self.conn.sendall(nmea.encode())
                         time.sleep(NMEA_SENTENCE_DELAY_SEC)
                 except (BrokenPipeError, OSError):
-                    self.conn.close()
-                    # print(f'\n*** Connection closed with {self.ip_add[0]}:{self.ip_add[1]} ***')
-                    logging.info(f"Connection closed with {self.ip_add[0]}:{self.ip_add[1]}")
+                    if self.conn:
+                        self.conn.close()
+                    if self.ip_add:
+                        logging.info(f"Connection closed with {self.ip_add[0]}:{self.ip_add[1]}")
                     # Close thread
                     sys.exit()
             time.sleep(max(1 - (time.perf_counter() - timer_start), 0))
