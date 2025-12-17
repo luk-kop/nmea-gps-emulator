@@ -3,7 +3,7 @@
 # Network
 MAX_TCP_CONNECTIONS: int = 10
 DEFAULT_NMEA_PORT: int = 10110
-DEFAULT_LOCAL_IP: str = "0.0.0.0"
+DEFAULT_LOCAL_IP: str = "0.0.0.0"  # noqa: S104
 DEFAULT_REMOTE_IP: str = "127.0.0.1"
 
 # Timing
