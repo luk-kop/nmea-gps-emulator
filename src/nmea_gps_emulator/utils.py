@@ -93,9 +93,7 @@ def ip_port_input(option: str) -> tuple[str, int]:
     while True:
         try:
             if option == "telnet":
-                print(
-                    f"\n### Enter Local IP address and port number [{DEFAULT_LOCAL_IP}:{DEFAULT_NMEA_PORT}]: ###"
-                )
+                print(f"\n### Enter Local IP address and port number [{DEFAULT_LOCAL_IP}:{DEFAULT_NMEA_PORT}]: ###")
                 try:
                     ip_port_socket = input(">>> ")
                 except KeyboardInterrupt:
@@ -103,9 +101,7 @@ def ip_port_input(option: str) -> tuple[str, int]:
                 if ip_port_socket == "":
                     return (DEFAULT_LOCAL_IP, DEFAULT_NMEA_PORT)
             elif option == "stream":
-                print(
-                    f"\n### Enter Remote IP address and port number [{DEFAULT_REMOTE_IP}:{DEFAULT_NMEA_PORT}]: ###"
-                )
+                print(f"\n### Enter Remote IP address and port number [{DEFAULT_REMOTE_IP}:{DEFAULT_NMEA_PORT}]: ###")
                 try:
                     ip_port_socket = input(">>> ")
                 except KeyboardInterrupt:
@@ -118,7 +114,8 @@ def ip_port_input(option: str) -> tuple[str, int]:
                 (25[0-5]\.|2[0-4][0-9]\.|1[0-9]{2}\.|[0-9]{1,2}\.){2}  # 2nd and 3th octet
                 (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2}))            # 4th octet
                 :
-                (6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})   # port number 1-65535
+                (6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|
+                [1-5][0-9]{4}|[1-9][0-9]{0,3})   # port number 1-65535
                 )$""",
                 re.VERBOSE,
             )
@@ -228,8 +225,8 @@ def serial_config_input() -> dict[str, str | int]:
         "timeout": 1,
     }
 
-    ports_connected: list[serial.tools.list_ports_common.ListPortInfo] = (
-        serial.tools.list_ports.comports(include_links=False)
+    ports_connected: list[serial.tools.list_ports_common.ListPortInfo] = serial.tools.list_ports.comports(
+        include_links=False
     )
     ports_connected_names: list[str] = [port.device for port in ports_connected]
     print("\n### Connected Serial Ports: ###")

@@ -6,9 +6,7 @@ from nmea_gps_emulator.nmea_gps import Gpgga, Gpgll, GpgsvGroup, Gphdt, Gprmc, G
 
 
 class TestNmeaGps(unittest.TestCase):
-    """
-    Tests for NMEA sentences.
-    """
+    """Tests for NMEA sentences."""
 
     def setUp(self) -> None:
         self.time: datetime = datetime(2021, 3, 9, 12, 9, 44, 855497)
@@ -23,11 +21,13 @@ class TestNmeaGps(unittest.TestCase):
         }
 
     def test_checksum(self) -> None:
+        """Test NMEA checksum calculation."""
         test_data = "GPRMC,095940.000,A,5432.216088,N,01832.664132,E,0.019,0.00,130720,,,A"
         check_sum = NmeaMsg.check_sum(test_data)
         self.assertEqual(check_sum, "59")
 
     def test_gprmc_str(self) -> None:
+        """Test GPRMC sentence string representation."""
         expected = "$GPRMC,120944.000,A,5425.123,N,01832.664,E,12.300,123.1,090321,,,A*56\r\n"
         test_obj = Gprmc(
             utc_date_time=self.time,
@@ -38,6 +38,7 @@ class TestNmeaGps(unittest.TestCase):
         self.assertEqual(test_obj.__str__(), expected)
 
     def test_gpgga_str(self) -> None:
+        """Test GPGGA sentence string representation."""
         expected = "$GPGGA,120944.00,5425.123,N,01832.664,E,1,12,0.92,15.2,M,32.5,M,,*66\r\n"
         test_obj = Gpgga(
             sats_count=12,
@@ -48,25 +49,27 @@ class TestNmeaGps(unittest.TestCase):
         self.assertEqual(test_obj.__str__(), expected)
 
     def test_gpzda_str(self) -> None:
+        """Test GPZDA sentence string representation."""
         expected = "$GPZDA,120944.000,09,03,2021,0,0*57\r\n"
         test_obj = Gpzda(utc_date_time=self.time)
         self.assertEqual(test_obj.__str__(), expected)
 
     def test_gphdt_str(self) -> None:
+        """Test GPHDT sentence string representation."""
         expected = "$GPHDT,123.1,T*34\r\n"
         test_obj = Gphdt(heading=self.course)
         self.assertEqual(test_obj.__str__(), expected)
 
     def test_gpgll_str(self) -> None:
+        """Test GPGLL sentence string representation."""
         expected = "$GPGLL,5425.123,N,01832.664,E,120944.000,A,A*59\r\n"
         test_obj = Gpgll(utc_date_time=self.time, position=self.position)
         self.assertEqual(test_obj.__str__(), expected)
 
     @mock.patch("random.randint")
     @mock.patch("random.sample")
-    def test_gpgsv_group(
-        self, mock_random_sample: mock.MagicMock, mock_random_randint: mock.MagicMock
-    ) -> None:
+    def test_gpgsv_group(self, mock_random_sample: mock.MagicMock, mock_random_randint: mock.MagicMock) -> None:
+        """Test GPGSV group sentence generation."""
         expected = (
             "$GPGSV,4,1,15,20,80,349,89,30,80,349,89,10,80,349,89,21,80,349,89*7B\r\n"
             "$GPGSV,4,2,15,03,80,349,89,02,80,349,89,19,80,349,89,08,80,349,89*7A\r\n"

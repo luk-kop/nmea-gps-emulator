@@ -23,9 +23,7 @@ from .constants import (
 class NmeaMsg:
     """The class represent a group of NMEA sentences."""
 
-    def __init__(
-        self, position: dict[str, str], altitude: float, speed: float, heading: float
-    ) -> None:
+    def __init__(self, position: dict[str, str], altitude: float, speed: float, heading: float) -> None:
         """Initialize NMEA message generator with position, altitude, speed, and heading."""
         # Instance attributes
         self.utc_date_time: datetime.datetime = datetime.datetime.now(datetime.UTC)
@@ -47,16 +45,14 @@ class NmeaMsg:
             antenna_altitude_above_msl=DEFAULT_ANTENNA_ALTITUDE_MSL,
         )
         self.gpgll: Gpgll = Gpgll(utc_date_time=self.utc_date_time, position=position)
-        self.gprmc: Gprmc = Gprmc(
-            utc_date_time=self.utc_date_time, position=position, sog=speed, cmg=heading
-        )
+        self.gprmc: Gprmc = Gprmc(utc_date_time=self.utc_date_time, position=position, sog=speed, cmg=heading)
         self.gphdt: Gphdt = Gphdt(heading=heading)
         self.gpvtg: Gpvtg = Gpvtg(heading_true=heading, sog_knots=speed)
         self.gpzda: Gpzda = Gpzda(utc_date_time=self.utc_date_time)
         self.nmea_sentences: list[Gpgga | Gpgsa | Gpgsv | Gpgll | Gprmc | Gphdt | Gpvtg | Gpzda] = [
             self.gga,
             self.gpgsa,
-            *[gpgsv for gpgsv in self.gpgsv_group.gpgsv_instances],
+            *list(self.gpgsv_group.gpgsv_instances),
             self.gpgll,
             self.gprmc,
             self.gphdt,
@@ -125,14 +121,8 @@ class NmeaMsg:
         # Forward transformation - returns longitude, latitude, back azimuth of terminus points
         lon_end, lat_end, back_azimuth = g.fwd(lon_start, lat_start, self.heading, distance)
         # Change direction when cross the equator or prime meridian (Greenwich)
-        if lat_end >= 0:
-            lat_direction = "N"
-        else:
-            lat_direction = "S"
-        if lon_end >= 0:
-            lon_direction = "E"
-        else:
-            lon_direction = "W"
+        lat_direction = "N" if lat_end >= 0 else "S"
+        lon_direction = "E" if lon_end >= 0 else "W"
         lon_end, lat_end = abs(lon_end), abs(lat_end)
         # New GPS position after calculation.
         lat_degrees = int(lat_end)
@@ -250,6 +240,7 @@ class Gpgga:
         dgps_last_update: str = "",
         dgps_ref_station_id: str = "",
     ) -> None:
+        """Initialize GPGGA sentence with position and satellite data."""
         self.sats_count: int = sats_count
         self.utc_time = utc_date_time
         self.position: dict[str, str] = position
@@ -267,9 +258,11 @@ class Gpgga:
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
+        """Set UTC time from datetime object."""
         self._utc_time = value.strftime("%H%M%S")
 
     def __str__(self) -> str:
+        """Return formatted GPGGA sentence string."""
         nmea_output = (
             f"{self.sentence_id},{self.utc_time}.00,{self.position['latitude_value']},"
             f"{self.position['latitude_direction']},{self.position['longitude_value']},"
@@ -296,6 +289,7 @@ class Gpgll:
         data_status: str = "A",
         faa_mode: str = "A",
     ) -> None:
+        """Initialize GPGLL sentence with position and time data."""
         # UTC time in format: 211250
         self.utc_time = utc_date_time
         self.position: dict[str, str] = position
@@ -305,13 +299,16 @@ class Gpgll:
 
     @property
     def utc_time(self) -> str:
+        """Get UTC time in HHMMSS format."""
         return self._utc_time
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
+        """Set UTC time from datetime object."""
         self._utc_time = value.strftime("%H%M%S")
 
     def __str__(self) -> str:
+        """Return formatted GPGLL sentence string."""
         nmea_output = (
             f"{self.sentence_id},{self.position['latitude_value']},"
             f"{self.position['latitude_direction']},{self.position['longitude_value']},"
@@ -340,6 +337,7 @@ class Gprmc:
         magnetic_var_value: str = "",
         magnetic_var_direct: str = "",
     ) -> None:
+        """Initialize GPRMC sentence with position, speed, and course data."""
         # UTC time in format: 211250
         self.utc_time = utc_date_time
         # UTC date in format: 130720
@@ -356,22 +354,27 @@ class Gprmc:
 
     @property
     def utc_time(self) -> str:
+        """Get UTC time in HHMMSS format."""
         return self._utc_time
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
+        """Set UTC time and date from datetime object."""
         self._utc_time = value.strftime("%H%M%S")
         self._utc_date = value.strftime("%d%m%y")
 
     @property
     def utc_date(self) -> str:
+        """Get UTC date in DDMMYY format."""
         return self._utc_date
 
     @utc_date.setter
     def utc_date(self, value: datetime.datetime) -> None:
+        """Set UTC date from datetime object."""
         self._utc_date = value.strftime("%d%m%y")
 
     def __str__(self) -> str:
+        """Return formatted GPRMC sentence string."""
         nmea_output = (
             f"{self.sentence_id},{self.utc_time}.000,{self.data_status},"
             f"{self.position['latitude_value']},{self.position['latitude_direction']},"
@@ -399,6 +402,7 @@ class Gpgsa:
         hdop: float = DEFAULT_HDOP,
         vdop: float = DEFAULT_VDOP,
     ) -> None:
+        """Initialize GPGSA sentence with satellite and DOP data."""
         self.select_mode: str = select_mode
         self.mode: int = mode
         self.sats_ids = gpgsv_group.sats_ids
@@ -408,17 +412,21 @@ class Gpgsa:
 
     @property
     def sats_ids(self) -> list[str]:
+        """Get list of satellite IDs."""
         return self._sats_ids
 
     @sats_ids.setter
     def sats_ids(self, value: list[str]) -> None:
+        """Set satellite IDs by randomly sampling from available satellites."""
         self._sats_ids = random.sample(value, k=random.randint(4, 12))
 
     @property
     def sats_count(self) -> int:
+        """Get count of active satellites."""
         return len(self.sats_ids)
 
     def __str__(self) -> str:
+        """Return formatted GPGSA sentence string."""
         # IDs of sat used in position fix (12 fields), if less than 12 sats, fill fields with ''
         sats_ids_output = self.sats_ids[:]
         while len(sats_ids_output) < 12:
@@ -437,25 +445,19 @@ class GpgsvGroup:
     sats_in_sentence: int = 4
 
     def __init__(self, sats_total: int = 15) -> None:
+        """Initialize GPGSV group with specified number of satellites."""
         self.gpgsv_instances: list[Gpgsv] = []
         self.sats_total = sats_total
         self.num_of_gsv_in_group: int = ceil(self.sats_total / self.sats_in_sentence)
         # List of satellites ids for all GPGSV sentences
-        self.sats_ids: list[str] = random.sample(
-            [f"{_:02d}" for _ in range(1, 33)], k=self.sats_total
-        )
+        self.sats_ids: list[str] = random.sample([f"{_:02d}" for _ in range(1, 33)], k=self.sats_total)
         # Iterator for sentence sats IDs
         sats_ids_iter = iter(self.sats_ids)
         # Initialize GPGSV sentences
         for sentence_num in range(1, self.num_of_gsv_in_group + 1):
-            if (
-                sentence_num == self.num_of_gsv_in_group
-                and self.sats_total % self.sats_in_sentence != 0
-            ):
+            if sentence_num == self.num_of_gsv_in_group and self.sats_total % self.sats_in_sentence != 0:
                 self.sats_in_sentence = self.sats_total % self.sats_in_sentence
-            sats_ids_sentence: list[str] = [
-                next(sats_ids_iter) for _ in range(self.sats_in_sentence)
-            ]
+            sats_ids_sentence: list[str] = [next(sats_ids_iter) for _ in range(self.sats_in_sentence)]
             gpgsv_sentence = Gpgsv(
                 sats_total=self.sats_total,
                 sats_in_sentence=self.sats_in_sentence,
@@ -467,16 +469,19 @@ class GpgsvGroup:
 
     @property
     def sats_total(self) -> int:
+        """Get total number of satellites."""
         return self._sats_total
 
     @sats_total.setter
     def sats_total(self, value: int) -> None:
+        """Set total number of satellites (minimum 4)."""
         if int(value) < 4:
             self._sats_total = 4
         else:
             self._sats_total = value
 
     def __str__(self) -> str:
+        """Return formatted string of all GPGSV sentences."""
         gpgsv_group_str = ""
         for gpgsv in self.gpgsv_instances:
             gpgsv_group_str += f"{gpgsv}"
@@ -499,6 +504,7 @@ class Gpgsv:
         sats_in_sentence: int,
         sats_ids: list[str],
     ) -> None:
+        """Initialize GPGSV sentence with satellite visibility data."""
         self.num_of_gsv_in_group: int = num_of_gsv_in_group
         self.sentence_num: int = sentence_num
         self.sats_total: int = sats_total
@@ -513,9 +519,9 @@ class Gpgsv:
             self.sats_details += f",{satellite_id},{elevation:02d},{azimuth:03d},{snr:02d}"
 
     def __str__(self) -> str:
+        """Return formatted GPGSV sentence string."""
         nmea_output = (
-            f"{self.sentence_id},{self.num_of_gsv_in_group},{self.sentence_num},"
-            f"{self.sats_total}{self.sats_details}"
+            f"{self.sentence_id},{self.num_of_gsv_in_group},{self.sentence_num},{self.sats_total}{self.sats_details}"
         )
         return f"${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n"
 
@@ -530,9 +536,11 @@ class Gphdt:
     sentence_id: str = "GPHDT"
 
     def __init__(self, heading: float) -> None:
+        """Initialize GPHDT sentence with heading data."""
         self.heading: float = heading
 
     def __str__(self) -> str:
+        """Return formatted GPHDT sentence string."""
         nmea_output = f"{self.sentence_id},{self.heading},T"
         return f"${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n"
 
@@ -551,6 +559,7 @@ class Gpvtg:
         sog_knots: float,
         heading_magnetic: float | str = "",
     ) -> None:
+        """Initialize GPVTG sentence with heading and speed data."""
         self.heading_true: float = heading_true
         self.heading_magnetic: float | str = heading_magnetic
         self.sog_knots: float = sog_knots
@@ -561,9 +570,9 @@ class Gpvtg:
         return round(self.sog_knots * 1.852, 1)
 
     def __str__(self) -> str:
+        """Return formatted GPVTG sentence string."""
         nmea_output = (
-            f"{self.sentence_id},{self.heading_true},T,{self.heading_magnetic},M,"
-            f"{self.sog_knots},N,{self.sog_kmhr},K"
+            f"{self.sentence_id},{self.heading_true},T,{self.heading_magnetic},M,{self.sog_knots},N,{self.sog_kmhr},K"
         )
         return f"${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n"
 
@@ -577,27 +586,33 @@ class Gpzda:
     sentence_id: str = "GPZDA"
 
     def __init__(self, utc_date_time: datetime.datetime) -> None:
+        """Initialize GPZDA sentence with date and time data."""
         # UTC time in format: 211250
         self.utc_time = utc_date_time
 
     @property
     def utc_time(self) -> str:
+        """Get UTC time in HHMMSS format."""
         return self._utc_time
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
+        """Set UTC time and date from datetime object."""
         self._utc_time = value.strftime("%H%M%S")
         self._utc_date = value.strftime("%d,%m,%Y")
 
     @property
     def utc_date(self) -> str:
+        """Get UTC date in DD,MM,YYYY format."""
         return self._utc_date
 
     @utc_date.setter
     def utc_date(self, value: datetime.datetime) -> None:
+        """Set UTC date from datetime object."""
         self._utc_date = value.strftime("%d,%m,%Y")
 
     def __str__(self) -> str:
+        """Return formatted GPZDA sentence string."""
         # Local Zone not used
         nmea_output = f"{self.sentence_id},{self.utc_time}.000,{self.utc_date},0,0"
         return f"${nmea_output}*{NmeaMsg.check_sum(nmea_output)}\r\n"

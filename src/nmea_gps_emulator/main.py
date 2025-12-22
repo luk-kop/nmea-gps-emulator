@@ -32,6 +32,7 @@ class Menu:
     """Display a menu and respond to choices when run."""
 
     def __init__(self) -> None:
+        """Initialize Menu with empty thread and NMEA object references."""
         self.nmea_thread: threading.Thread | None = None
         self.nmea_obj: NmeaMsg | None = None
         self.choices: dict[str, Callable[[], None]] = {
@@ -100,19 +101,13 @@ class Menu:
                     time.sleep(2)
                     first_run = False
                 try:
-                    prompt = input(
-                        'Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n'
-                    )
+                    prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
                 except KeyboardInterrupt:
                     handle_keyboard_interrupt()
                 if prompt == "":
                     new_head, new_speed = heading_speed_input()
                     # Get all 'nmea_srv*' telnet server threads
-                    thread_list = [
-                        thread
-                        for thread in threading.enumerate()
-                        if isinstance(thread, NmeaSrvThread)
-                    ]
+                    thread_list = [thread for thread in threading.enumerate() if isinstance(thread, NmeaSrvThread)]
                     if thread_list:
                         for thr in thread_list:
                             thr.set_heading(new_head)

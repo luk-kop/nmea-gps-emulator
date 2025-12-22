@@ -39,13 +39,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaM
             logging.info(f"Connected with {ip_add[0]}:{ip_add[1]}")
             thread_list = [thread.name for thread in threading.enumerate()]
             if (
-                len(
-                    [
-                        thread_name
-                        for thread_name in thread_list
-                        if thread_name.startswith("nmea_srv")
-                    ]
-                )
+                len([thread_name for thread_name in thread_list if thread_name.startswith("nmea_srv")])
                 < MAX_TCP_CONNECTIONS
             ):
                 nmea_srv_thread = NmeaSrvThread(
@@ -74,6 +68,7 @@ class NmeaSrvThread(threading.Thread):
         *args: Any,
         **kwargs: Any,
     ) -> None:
+        """Initialize NMEA server thread with connection and NMEA object."""
         super().__init__(*args, **kwargs)
         self.heading: float | None = None
         self.speed: float | None = None
@@ -108,11 +103,7 @@ class NmeaSrvThread(threading.Thread):
                     self._speed_cache = self.speed
                 # The following commands allow the same copies of NMEA data is sent on all threads
                 # Only first thread in a list can iterate over NMEA object (the same nmea output in all threads)
-                thread_list = [
-                    thread.name
-                    for thread in threading.enumerate()
-                    if thread.name.startswith("nmea_srv")
-                ]
+                thread_list = [thread.name for thread in threading.enumerate() if thread.name.startswith("nmea_srv")]
                 current_thread_name = threading.current_thread().name
                 if len(thread_list) > 1 and current_thread_name != thread_list[0]:
                     nmea_list = [f"{_}" for _ in self.nmea_object.nmea_sentences]
@@ -137,6 +128,7 @@ class NmeaStreamThread(NmeaSrvThread):
     """A thread dedicated for TCP or UDP stream connection."""
 
     def __init__(self, proto: str, port: int, *args: Any, **kwargs: Any) -> None:
+        """Initialize NMEA stream thread with protocol and port configuration."""
         super().__init__(*args, **kwargs)
         self.proto: str = proto
         self.port: int = port
@@ -147,9 +139,7 @@ class NmeaStreamThread(NmeaSrvThread):
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((self.ip_add, self.port))
-                    print(
-                        f"\n*** Sending NMEA data - TCP stream to {self.ip_add}:{self.port}... ***\n"
-                    )
+                    print(f"\n*** Sending NMEA data - TCP stream to {self.ip_add}:{self.port}... ***\n")
                     while True:
                         timer_start = time.perf_counter()
                         with self._lock:
@@ -203,6 +193,7 @@ class NmeaSerialThread(NmeaSrvThread):
     """A thread dedicated for serial connection."""
 
     def __init__(self, serial_config: dict[str, str | int], *args: Any, **kwargs: Any) -> None:
+        """Initialize NMEA serial thread with serial port configuration."""
         super().__init__(*args, **kwargs)
         self.serial_config: dict[str, str | int] = serial_config
 
@@ -240,10 +231,6 @@ class NmeaSerialThread(NmeaSrvThread):
                     time.sleep(max(1 - (time.perf_counter() - timer_start), 0))
         except serial.serialutil.SerialException as error:
             # Remove error number from output [...]
-            error_formatted = (
-                re.sub(r"\[(.*?)\]", "", str(error)).strip().replace("  ", " ").capitalize()
-            )
-            logging.error(
-                f"{error_formatted}. Please try 'sudo chmod a+rw {self.serial_config['port']}'"
-            )
+            error_formatted = re.sub(r"\[(.*?)\]", "", str(error)).strip().replace("  ", " ").capitalize()
+            logging.error(f"{error_formatted}. Please try 'sudo chmod a+rw {self.serial_config['port']}'")
             exit_script()
