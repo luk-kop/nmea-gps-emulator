@@ -29,3 +29,4 @@ terraform.tfvars
 
 # Custom
 *.zip
+notes/

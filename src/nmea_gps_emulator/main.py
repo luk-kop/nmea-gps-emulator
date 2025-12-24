@@ -64,37 +64,52 @@ class Menu:
         self.display_menu()
         while True:
             try:
-                choice = input(">>> ")
+                choice: str = input(">>> ")
             except KeyboardInterrupt:
                 handle_keyboard_interrupt()
-            action = self.choices.get(choice)
-            if action:
-                # Dummy 'nav_data_dict'
-                nav_data_dict = {
-                    "gps_speed": 10.035,
-                    "gps_heading": 45.0,
-                    "gps_altitude_amsl": 15.2,
-                    "position": {},
-                }
-                # Position, initial course and speed queries
-                nav_data_dict["position"] = position_input()
-                nav_data_dict["gps_heading"] = heading_input()
-                nav_data_dict["gps_speed"] = speed_input()
 
-                # Initialize NmeaMsg object
-                self.nmea_obj = NmeaMsg(
-                    position=nav_data_dict["position"],  # type: ignore[arg-type]
-                    altitude=nav_data_dict["gps_altitude_amsl"],  # type: ignore[arg-type]
-                    speed=nav_data_dict["gps_speed"],  # type: ignore[arg-type]
-                    heading=nav_data_dict["gps_heading"],  # type: ignore[arg-type]
-                )
+            action = self.choices.get(choice)
+            if not action:
+                continue
+
+            # Handle quit option immediately
+            if action == self.quit:
                 action()
-                break
-        # Changing the unit's course and speed by the user in the main thread.
+
+            # For other options, collect navigation data first
+            self._setup_navigation_data()
+            action()
+            break
+
+        # Start the interactive loop for course/speed changes
+        self._interactive_loop()
+
+    def _setup_navigation_data(self) -> None:
+        """Collect navigation data from user input."""
+        nav_data_dict = {
+            "gps_speed": 10.035,
+            "gps_heading": 45.0,
+            "gps_altitude_amsl": 15.2,
+            "position": {},
+        }
+
+        nav_data_dict["position"] = position_input()
+        nav_data_dict["gps_heading"] = heading_input()
+        nav_data_dict["gps_speed"] = speed_input()
+
+        self.nmea_obj = NmeaMsg(
+            position=nav_data_dict["position"],  # type: ignore[arg-type]
+            altitude=nav_data_dict["gps_altitude_amsl"],  # type: ignore[arg-type]
+            speed=nav_data_dict["gps_speed"],  # type: ignore[arg-type]
+            heading=nav_data_dict["gps_heading"],  # type: ignore[arg-type]
+        )
+
+    def _interactive_loop(self) -> None:
+        """Handle interactive course and speed changes."""
         first_run = True
         while True:
             if not self.nmea_thread or not self.nmea_thread.is_alive():
-                print("\n\n*** Closing the script... ***\n")
+                print("\nExiting...\n")
                 sys.exit()
             try:
                 if first_run:
@@ -163,4 +178,5 @@ class Menu:
 
     def quit(self) -> NoReturn:
         """Exit script."""
+        print("\nExiting...\n")
         sys.exit(0)

@@ -71,6 +71,7 @@ sudo chmod a+rw /dev/ttyUSB0
 ### Installation
 
 #### Option 1: Install from wheel file (Recommended)
+Download the wheel file from the [releases page](https://github.com/luk-kop/nmea-gps-emulator/releases) and install it:
 ```bash
 pip install nmea_gps_emulator-1.0.0-py3-none-any.whl
 ```
