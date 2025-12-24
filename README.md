@@ -55,6 +55,13 @@ Below instructions will get you a copy of the project up and running on your loc
 
 ### Requirements
 
+**Python 3.12 or higher is required.** If your system has an older Python version, you can use [pyenv](https://github.com/pyenv/pyenv) to install and manage multiple Python versions:
+```bash
+# Install Python 3.12 with pyenv
+pyenv install 3.12
+pyenv local 3.12  # Set Python 3.12 for this project
+```
+
 Python third party packages:
 * [pyproj](https://pypi.org/project/pyproj/)
 * [pyserial](https://pypi.org/project/pyserial/)
