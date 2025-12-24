@@ -127,7 +127,7 @@ class Menu:
                         for thr in thread_list:
                             thr.set_heading(new_head)
                             thr.set_speed(new_speed)
-                    else:
+                    elif self.nmea_obj:
                         # Set targeted head and speed without connected clients
                         self.nmea_obj.heading_targeted = new_head
                         self.nmea_obj.speed_targeted = new_speed
