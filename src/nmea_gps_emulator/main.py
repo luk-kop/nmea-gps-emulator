@@ -9,6 +9,16 @@ import uuid
 from collections.abc import Callable
 from typing import NoReturn
 
+from .constants import (
+    DEFAULT_ALTITUDE_AMSL,
+    DEFAULT_MENU_HEADING,
+    DEFAULT_MENU_SPEED,
+    MENU_CHOICE_QUIT,
+    MENU_CHOICE_SERIAL,
+    MENU_CHOICE_STREAM,
+    MENU_CHOICE_TCP_SERVER,
+    THREAD_STARTUP_DELAY_SEC,
+)
 from .custom_thread import (
     NmeaSerialThread,
     NmeaSrvThread,
@@ -29,21 +39,42 @@ from .utils import (
 
 
 class Menu:
-    """Display a menu and respond to choices when run."""
+    """Display a menu and respond to choices when run.
+
+    Main application controller that provides an interactive menu system
+    for selecting NMEA emulation modes (Serial, TCP Server, Stream) and
+    manages the lifecycle of NMEA threads and user interactions.
+    """
 
     def __init__(self) -> None:
-        """Initialize Menu with empty thread and NMEA object references."""
+        """Initialize Menu with empty thread and NMEA object references.
+
+        Sets up the menu choice mapping and initializes thread and NMEA object
+        references that will be populated during menu execution.
+
+        Returns:
+            None
+
+        """
         self.nmea_thread: threading.Thread | None = None
         self.nmea_obj: NmeaMsg | None = None
         self.choices: dict[str, Callable[[], None]] = {
-            "1": self.nmea_serial,
-            "2": self.nmea_tcp_server,
-            "3": self.nmea_stream,
-            "4": self.quit,
+            MENU_CHOICE_SERIAL: self.nmea_serial,
+            MENU_CHOICE_TCP_SERVER: self.nmea_tcp_server,
+            MENU_CHOICE_STREAM: self.nmea_stream,
+            MENU_CHOICE_QUIT: self.quit,
         }
 
     def display_menu(self) -> None:
-        """Display the main menu options."""
+        """Display the main menu options.
+
+        Shows the ASCII art banner and available emulation options including
+        Serial, TCP Server, Stream, and Quit choices with numbered selection.
+
+        Returns:
+            None
+
+        """
         print(r"""
 
 ..####...#####....####...........######..##...##..##..##..##.......####...######...####...#####..
@@ -60,7 +91,19 @@ class Menu:
         print("4 - Quit")
 
     def run(self) -> None:
-        """Display the menu and respond to choices."""
+        """Display the menu and respond to choices.
+
+        Main execution method that displays the menu, handles user input,
+        sets up navigation data, starts the selected emulation mode, and
+        enters the interactive loop for runtime course/speed changes.
+
+        Returns:
+            None
+
+        Raises:
+            SystemExit: If user presses Ctrl+C (handled by handle_keyboard_interrupt)
+
+        """
         self.display_menu()
         while True:
             try:
@@ -85,11 +128,23 @@ class Menu:
         self._interactive_loop()
 
     def _setup_navigation_data(self) -> None:
-        """Collect navigation data from user input."""
+        """Collect navigation data from user input.
+
+        Prompts user for GPS position, heading, and speed, then creates
+        the NMEA message object with the collected navigation parameters
+        and default altitude setting.
+
+        Returns:
+            None
+
+        Raises:
+            SystemExit: If user presses Ctrl+C during input (handled by input functions)
+
+        """
         nav_data_dict = {
-            "gps_speed": 10.035,
-            "gps_heading": 45.0,
-            "gps_altitude_amsl": 15.2,
+            "gps_speed": DEFAULT_MENU_SPEED,
+            "gps_heading": DEFAULT_MENU_HEADING,
+            "gps_altitude_amsl": DEFAULT_ALTITUDE_AMSL,
             "position": {},
         }
 
@@ -105,7 +160,19 @@ class Menu:
         )
 
     def _interactive_loop(self) -> None:
-        """Handle interactive course and speed changes."""
+        """Handle interactive course and speed changes.
+
+        Runs continuously to allow real-time updates of course and speed
+        while the emulator is running. Monitors thread health and applies
+        changes to all active NMEA server threads or the NMEA object directly.
+
+        Returns:
+            None
+
+        Raises:
+            SystemExit: When thread dies or user presses Ctrl+C
+
+        """
         first_run = True
         while True:
             if not self.nmea_thread or not self.nmea_thread.is_alive():
@@ -113,7 +180,7 @@ class Menu:
                 sys.exit()
             try:
                 if first_run:
-                    time.sleep(2)
+                    time.sleep(THREAD_STARTUP_DELAY_SEC)
                     first_run = False
                 try:
                     prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
@@ -136,7 +203,16 @@ class Menu:
                 handle_keyboard_interrupt()
 
     def nmea_serial(self) -> None:
-        """Run serial emulation of NMEA server device."""
+        """Run serial emulation of NMEA server device.
+
+        Prompts for serial port configuration and starts a NmeaSerialThread
+        to transmit NMEA data over the specified serial connection. Handles
+        RS-232/USB serial communication with configurable port settings.
+
+        Returns:
+            None
+
+        """
         # serial_port = '/dev/ttyUSB0'
         # Serial configuration query
         serial_config = serial_config_input()
@@ -149,7 +225,16 @@ class Menu:
         self.nmea_thread.start()
 
     def nmea_tcp_server(self) -> None:
-        """Run telnet server that emulates NMEA device."""
+        """Run telnet server that emulates NMEA device.
+
+        Prompts for local IP address and port, then starts a TCP server
+        that accepts multiple client connections and streams NMEA data
+        to all connected clients simultaneously.
+
+        Returns:
+            None
+
+        """
         # Local TCP server IP address and port number.
         srv_ip_address, srv_port = ip_port_input("telnet")
         self.nmea_thread = threading.Thread(
@@ -161,7 +246,16 @@ class Menu:
         self.nmea_thread.start()
 
     def nmea_stream(self) -> None:
-        """Run TCP or UDP NMEA stream to designated host."""
+        """Run TCP or UDP NMEA stream to designated host.
+
+        Prompts for remote IP address, port, and protocol selection,
+        then starts a client stream connection to send NMEA data to
+        a remote server using either TCP or UDP transport.
+
+        Returns:
+            None
+
+        """
         # IP address and port number query
         ip_add, port = ip_port_input("stream")
         # Transport protocol query.
@@ -177,6 +271,17 @@ class Menu:
         self.nmea_thread.start()
 
     def quit(self) -> NoReturn:
-        """Exit script."""
+        """Exit script.
+
+        Displays exit message and terminates the application cleanly
+        with exit code 0.
+
+        Returns:
+            Never returns (NoReturn) - terminates the application
+
+        Raises:
+            SystemExit: Always exits with code 0
+
+        """
         print("\nExiting...\n")
         sys.exit(0)
