@@ -30,7 +30,7 @@ jobs:
       - name: Check branch name
         run: |
           BRANCH="${{ github.head_ref }}"
-          if ! echo "$BRANCH" | grep -qE '^(feature|fix|bugfix|hotfix|docs|chore|refactor|test|release|ci)/'; then
+          if ! echo "$BRANCH" | grep -qE '^(feature|fix|bugfix|hotfix|docs|chore|refactor|test|release|ci|dependabot)/'; then
             echo "Error: Branch name must start with feature/, fix/, bugfix/, hotfix/, docs/, chore/, refactor/, test/, release/, or ci/"
             exit 1
           fi
