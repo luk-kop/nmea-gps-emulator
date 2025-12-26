@@ -103,6 +103,38 @@ nmea-gps-emulator
 ```bash
 python -m nmea_gps_emulator
 ```
+
+#### Command-line options
+
+The emulator supports the following command-line options to control output verbosity:
+
+```bash
+nmea-gps-emulator [OPTIONS]
+
+Options:
+  -h, --help     Show help message and exit
+  -q, --quiet    Suppress informational messages (only show errors and user prompts)
+  -v, --verbose  Enable verbose output with detailed debug information
+```
+
+**Usage examples:**
+
+```bash
+# Normal operation (default) - shows status messages and connection info
+nmea-gps-emulator
+
+# Quiet mode - minimal output, useful for scripts or automation
+nmea-gps-emulator --quiet
+
+# Verbose mode - detailed diagnostic information for troubleshooting
+nmea-gps-emulator --verbose
+```
+
+**Output modes:**
+- **Default**: Shows informational messages including server status, client connections, and configuration details
+- **Quiet mode** (`-q`): Only displays user prompts, errors, and essential status messages. Ideal for automated environments or when you want minimal console output
+- **Verbose mode** (`-v`): Displays detailed debug information including timing metrics, thread operations, and internal state changes. Useful for debugging and development
+
 After starting the script correctly, the following prompt should appear in the OS console:
 
 ```bash

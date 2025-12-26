@@ -46,16 +46,20 @@ class Menu:
     manages the lifecycle of NMEA threads and user interactions.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, quiet: bool = False) -> None:
         """Initialize Menu with empty thread and NMEA object references.
 
         Sets up the menu choice mapping and initializes thread and NMEA object
         references that will be populated during menu execution.
 
+        Args:
+            quiet: If True, suppress informational logging messages
+
         Returns:
             None
 
         """
+        self.quiet = quiet
         self.nmea_thread: threading.Thread | None = None
         self.nmea_obj: NmeaMsg | None = None
         self.choices: dict[str, Callable[[], None]] = {
@@ -195,10 +199,12 @@ class Menu:
                         for thr in thread_list:
                             thr.set_heading(new_head)
                             thr.set_speed(new_speed)
+                        logging.info(f"Updated course to {new_head}° and speed to {new_speed} knots")
                     elif self.nmea_obj:
                         # Set targeted head and speed without connected clients
                         self.nmea_obj.heading_targeted = new_head
                         self.nmea_obj.speed_targeted = new_speed
+                        logging.info(f"Updated course to {new_head}° and speed to {new_speed} knots")
                     print()
             except KeyboardInterrupt:
                 handle_keyboard_interrupt()
@@ -284,7 +290,7 @@ class Menu:
             SystemExit: Always exits with code 0
 
         """
-        print("\n[INFO] Exiting...\n")
+        print("\nExiting...")
 
         # Give threads a moment to finish current operations
         if self.nmea_thread and self.nmea_thread.is_alive():

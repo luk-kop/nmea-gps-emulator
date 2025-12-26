@@ -1,5 +1,6 @@
 """Utility functions for user input handling and script management."""
 
+import logging
 import os
 import platform
 import re
@@ -34,7 +35,7 @@ def handle_keyboard_interrupt() -> NoReturn:
         SystemExit: Always exits the application by raising SystemExit
 
     """
-    print("\n\n[INFO] Closing the script...\n")
+    print("\n\nClosing...")
     raise SystemExit(0)
 
 
@@ -73,7 +74,7 @@ def exit_script() -> None:
     """
     current_script_pid: int = os.getpid()
     current_script: psutil.Process = psutil.Process(current_script_pid)
-    print("[INFO] Closing the script...\n")
+    logging.info("Closing the script...")
     time.sleep(SCRIPT_EXIT_DELAY_SEC)
     current_script.terminate()
 
