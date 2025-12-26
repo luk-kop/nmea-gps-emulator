@@ -1,0 +1,19 @@
+Documentation:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.md'
+
+Source:
+  - changed-files:
+      - any-glob-to-any-file: 'src/**'
+
+Tests:
+  - changed-files:
+      - any-glob-to-any-file: 'tests/**'
+
+Workflows:
+  - changed-files:
+      - any-glob-to-any-file: '.github/workflows/**'
+
+Config:
+  - changed-files:
+      - any-glob-to-any-file: ['pyproject.toml', '.pre-commit-config.yaml']
