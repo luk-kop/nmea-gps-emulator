@@ -330,7 +330,7 @@ jobs:
           nmea-gps-emulator --help
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-${{ matrix.os }}
           path: dist/
