@@ -3,9 +3,8 @@
 import os
 import platform
 import re
-import sys
 import time
-from re import Pattern
+from re import Match, Pattern
 from typing import NoReturn
 
 import psutil
@@ -32,11 +31,11 @@ def handle_keyboard_interrupt() -> NoReturn:
     (Ctrl+C) throughout the application.
 
     Raises:
-        SystemExit: Always exits the application with sys.exit()
+        SystemExit: Always exits the application by raising SystemExit
 
     """
-    print("\n\n*** Closing the script... ***\n")
-    sys.exit()
+    print("\n\n[INFO] Closing the script...\n")
+    raise SystemExit(0)
 
 
 def safe_input(prompt: str, default: str | None = None) -> str:
@@ -54,7 +53,7 @@ def safe_input(prompt: str, default: str | None = None) -> str:
 
     """
     try:
-        user_input = input(prompt)
+        user_input: str = input(prompt)
         if user_input == "" and default is not None:
             return default
         return user_input
@@ -74,7 +73,7 @@ def exit_script() -> None:
     """
     current_script_pid: int = os.getpid()
     current_script: psutil.Process = psutil.Process(current_script_pid)
-    print("*** Closing the script... ***\n")
+    print("[INFO] Closing the script...\n")
     time.sleep(SCRIPT_EXIT_DELAY_SEC)
     current_script.terminate()
 
@@ -96,8 +95,9 @@ def position_input() -> dict[str, str]:
 
     """
     while True:
-        print("\n### Enter unit position (format - 5430N 01920E): ###")
-        position_data: str = safe_input(">>> ", "")
+        print("\nEnter unit position (format: 5430N 01920E)")
+        print("Default: 5430N 01920E")
+        position_data: str = safe_input("> ", "")
 
         if position_data == "":
             return DEFAULT_POSITION.copy()
@@ -112,7 +112,7 @@ def position_input() -> dict[str, str]:
             )$""",
             re.VERBOSE,
         )
-        mo = position_regex_pattern.fullmatch(position_data)
+        mo: Match[str] | None = position_regex_pattern.fullmatch(position_data)
         if mo:
             position_dict: dict[str, str] = {
                 "latitude_value": f"{float(mo.group(2)):08.3f}",
@@ -121,7 +121,7 @@ def position_input() -> dict[str, str]:
                 "longitude_direction": mo.group(7),
             }
             return position_dict
-        print("\nError: Wrong entry! Try again.")
+        print("[ERROR] Invalid position format. Use: 5430N 01920E")
 
 
 def ip_port_input(option: str) -> tuple[str, int]:
@@ -129,6 +129,9 @@ def ip_port_input(option: str) -> tuple[str, int]:
 
     Prompts user for IP:port combination based on the connection type
     (telnet server or stream client) and validates the format.
+
+    Validates IP addresses in range 0.0.0.0 to 255.255.255.255 and
+    port numbers in range 1 to 65535.
 
     Args:
         option: Connection type - "telnet" for local IP or "stream" for remote IP
@@ -141,32 +144,57 @@ def ip_port_input(option: str) -> tuple[str, int]:
 
     """
     while True:
+        ip_port_socket: str
         if option == "telnet":
-            print(f"\n### Enter Local IP address and port number [{DEFAULT_LOCAL_IP}:{DEFAULT_NMEA_PORT}]: ###")
-            ip_port_socket: str = safe_input(">>> ", "")
+            print("\nEnter local IP address and port number")
+            print(f"Default: {DEFAULT_LOCAL_IP}:{DEFAULT_NMEA_PORT}")
+            ip_port_socket = safe_input("> ", "")
             if ip_port_socket == "":
                 return (DEFAULT_LOCAL_IP, DEFAULT_NMEA_PORT)
         elif option == "stream":
-            print(f"\n### Enter Remote IP address and port number [{DEFAULT_REMOTE_IP}:{DEFAULT_NMEA_PORT}]: ###")
-            ip_port_socket = safe_input(">>> ", "")
+            print("\nEnter remote IP address and port number")
+            print(f"Default: {DEFAULT_REMOTE_IP}:{DEFAULT_NMEA_PORT}")
+            ip_port_socket = safe_input("> ", "")
             if ip_port_socket == "":
                 return (DEFAULT_REMOTE_IP, DEFAULT_NMEA_PORT)
 
+        # Improved regex that correctly validates all IP addresses (0.0.0.0 to 255.255.255.255)
+        # and port numbers (1 to 65535)
         ip_port_regex_pattern: Pattern[str] = re.compile(
-            r"""^(
-            ((22[0-3]\.|2[0-1][0-9]\.|1[0-9]{2}\.|[0-9]{1,2}\.)  # 1st octet
-            (25[0-5]\.|2[0-4][0-9]\.|1[0-9]{2}\.|[0-9]{1,2}\.){2}  # 2nd and 3th octet
-            (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2}))            # 4th octet
+            r"""^
+            # IP Address: Each octet can be 0-255
+            (
+                # First octet: 0-255
+                (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])
+                \.
+                # Second octet: 0-255
+                (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])
+                \.
+                # Third octet: 0-255
+                (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])
+                \.
+                # Fourth octet: 0-255
+                (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])
+            )
             :
-            (6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|
-            [1-5][0-9]{4}|[1-9][0-9]{0,3})   # port number 1-65535
-            )$""",
+            # Port: 1-65535 (port 0 is reserved and not allowed)
+            (
+                6553[0-5]|          # 65530-65535
+                655[0-2][0-9]|      # 65500-65529
+                65[0-4][0-9]{2}|    # 65000-65499
+                6[0-4][0-9]{3}|     # 60000-64999
+                [1-5][0-9]{4}|      # 10000-59999
+                [1-9][0-9]{0,3}     # 1-9999
+            )
+            $""",
             re.VERBOSE,
         )
-        mo = ip_port_regex_pattern.fullmatch(ip_port_socket)
+        mo: Match[str] | None = ip_port_regex_pattern.fullmatch(ip_port_socket)
         if mo:
-            return (mo.group(2), int(mo.group(6)))
-        print("\n\nError: Wrong format use - 192.168.10.10:2020.")
+            return (mo.group(1), int(mo.group(6)))
+        print("[ERROR] Invalid format. Use: 192.168.10.10:2020")
+        print("        IP range: 0.0.0.0 - 255.255.255.255")
+        print("        Port range: 1 - 65535")
 
 
 def trans_proto_input() -> str:
@@ -183,13 +211,15 @@ def trans_proto_input() -> str:
 
     """
     while True:
-        print("\n### Enter transport protocol - TCP or UDP [TCP]: ###")
-        stream_proto: str = safe_input(">>> ", "tcp").strip().lower()
+        print("\nEnter transport protocol (TCP or UDP)")
+        print("Default: TCP")
+        stream_proto: str = safe_input("> ", "tcp").strip().lower()
 
         if stream_proto == "" or stream_proto == "tcp":
             return "tcp"
         elif stream_proto == "udp":
             return "udp"
+        print("[ERROR] Invalid protocol. Enter 'tcp' or 'udp'")
 
 
 def heading_input() -> float:
@@ -206,16 +236,18 @@ def heading_input() -> float:
 
     """
     while True:
-        print(f"\n### Enter unit course - range 000-359 [{int(DEFAULT_HEADING):03d}]: ###")
-        heading_data: str = safe_input(">>> ", "")
+        print("\nEnter unit course (0-359 degrees)")
+        print(f"Default: {int(DEFAULT_HEADING):03d}")
+        heading_data: str = safe_input("> ", "")
 
         if heading_data == "":
             return DEFAULT_HEADING
 
         heading_regex_pattern: str = r"(3[0-5]\d|[0-2]\d{2}|\d{1,2})"
-        mo = re.fullmatch(heading_regex_pattern, heading_data)
+        mo: Match[str] | None = re.fullmatch(heading_regex_pattern, heading_data)
         if mo:
             return float(mo.group())
+        print("[ERROR] Invalid heading. Enter a value between 0 and 359 degrees")
 
 
 def speed_input() -> float:
@@ -233,19 +265,24 @@ def speed_input() -> float:
 
     """
     while True:
-        print(f"\n### Enter unit speed in knots - range 0-999 [{DEFAULT_SPEED}]: ###")
-        speed_data: str = safe_input(">>> ", "")
+        print("\nEnter unit speed (0-999 knots)")
+        print(f"Default: {DEFAULT_SPEED}")
+        speed_data: str = safe_input("> ", "")
 
         if speed_data == "":
             return DEFAULT_SPEED
 
         speed_regex_pattern: str = r"(\d{1,3}(\.\d+)?)"
-        mo = re.fullmatch(speed_regex_pattern, speed_data)
+        mo: Match[str] | None = re.fullmatch(speed_regex_pattern, speed_data)
         if mo:
             match: str = mo.group()
             if match.startswith("0") and match != "0" and not match.startswith("0."):
                 match = match.lstrip("0")
-            return float(match)
+            speed_value: float = float(match)
+            # Validate range
+            if 0 <= speed_value <= 999:
+                return speed_value
+        print("[ERROR] Invalid speed. Enter a value between 0 and 999 knots")
 
 
 def heading_speed_input() -> tuple[float, float]:
@@ -261,24 +298,30 @@ def heading_speed_input() -> tuple[float, float]:
         SystemExit: If user presses Ctrl+C (handled by safe_input)
 
     """
+    heading_new: float
     while True:
-        heading_data: str = safe_input("New course >>> ")
+        heading_data: str = safe_input("New course (0-359 degrees) > ")
         heading_regex_pattern: str = r"(3[0-5]\d|[0-2]\d{2}|\d{1,2})"
-        mo = re.fullmatch(heading_regex_pattern, heading_data)
+        mo: Match[str] | None = re.fullmatch(heading_regex_pattern, heading_data)
         if mo:
-            heading_new: float = float(mo.group())
+            heading_new = float(mo.group())
             break
+        print("[ERROR] Invalid heading. Enter a value between 0 and 359 degrees")
 
+    speed_new: float
     while True:
-        speed_data: str = safe_input("New speed >>> ")
+        speed_data: str = safe_input("New speed (0-999 knots) > ")
         speed_regex_pattern: str = r"(\d{1,3}(\.\d+)?)"
         mo = re.fullmatch(speed_regex_pattern, speed_data)
         if mo:
             match: str = mo.group()
             if match.startswith("0") and match != "0" and not match.startswith("0."):
                 match = match.lstrip("0")
-            speed_new: float = float(match)
-            break
+            speed_new = float(match)
+            # Validate range
+            if 0 <= speed_new <= 999:
+                break
+        print("[ERROR] Invalid speed. Enter a value between 0 and 999 knots")
 
     return heading_new, speed_new
 
@@ -314,31 +357,40 @@ def serial_config_input() -> dict[str, str | int]:
         include_links=False
     )
     ports_connected_names: list[str] = [port.device for port in ports_connected]
-    print("\n### Connected Serial Ports: ###")
+    print("\nConnected serial ports:")
     for port in sorted(ports_connected):
-        print(f"   - {port}")
+        print(f"  - {port}")
     platform_os: str = platform.system()
 
+    serial_port: str
     while True:
         if platform_os.lower() == "linux":
-            print("\n### Choose Serial Port [/dev/ttyUSB0]: ###")
-            serial_port: str = safe_input(">>> ", "/dev/ttyUSB0")
+            print("\nChoose serial port")
+            print("Default: /dev/ttyUSB0")
+            serial_port = safe_input("> ", "/dev/ttyUSB0")
         elif platform_os.lower() == "windows":
-            print("\n### Choose Serial Port [COM1]: ###")
-            serial_port = safe_input(">>> ", "COM1")
+            print("\nChoose serial port")
+            print("Default: COM1")
+            serial_port = safe_input("> ", "COM1")
+        else:
+            # Fallback for other platforms
+            print("\nChoose serial port")
+            print("Default: /dev/ttyUSB0")
+            serial_port = safe_input("> ", "/dev/ttyUSB0")
 
         if serial_port in ports_connected_names:
             serial_set["port"] = serial_port
             break
-        print(f"\nError: '{serial_port}' is wrong port's name.")
+        print(f"[ERROR] Invalid port name: {serial_port}")
 
     while True:
-        print(f"\n### Enter serial baudrate [{DEFAULT_SERIAL_BAUDRATE}]: ###")
-        baudrate: str = safe_input(">>> ", str(DEFAULT_SERIAL_BAUDRATE))
+        print("\nEnter serial baudrate")
+        print(f"Default: {DEFAULT_SERIAL_BAUDRATE}")
+        baudrate: str = safe_input("> ", str(DEFAULT_SERIAL_BAUDRATE))
 
         if baudrate in SUPPORTED_BAUDRATES:
             serial_set["baudrate"] = int(baudrate)
             break
-        print(f"\n*** Error: '{baudrate}' is wrong port's baudrate. ***")
+        print(f"[ERROR] Invalid baudrate: {baudrate}")
 
     return serial_set

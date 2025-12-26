@@ -2,7 +2,7 @@
 
 """Main module for NMEA GPS Emulator application."""
 
-import sys
+import logging
 import threading
 import time
 import uuid
@@ -84,11 +84,11 @@ class Menu:
 ..####...##.......####...........######..##...##...####...######..##..##....##.....####...##..##.
 .................................................................................................
         """)
-        print("### Choose emulator option: ###")
-        print("1 - NMEA Serial")
-        print("2 - NMEA TCP Server")
-        print("3 - NMEA TCP or UDP Stream")
-        print("4 - Quit")
+        print("Choose emulator option:")
+        print("  1. NMEA Serial")
+        print("  2. NMEA TCP Server")
+        print("  3. NMEA TCP or UDP Stream")
+        print("  4. Quit")
 
     def run(self) -> None:
         """Display the menu and respond to choices.
@@ -107,7 +107,7 @@ class Menu:
         self.display_menu()
         while True:
             try:
-                choice: str = input(">>> ")
+                choice: str = input("> ")
             except KeyboardInterrupt:
                 handle_keyboard_interrupt()
 
@@ -176,14 +176,15 @@ class Menu:
         first_run = True
         while True:
             if not self.nmea_thread or not self.nmea_thread.is_alive():
-                print("\nExiting...\n")
-                sys.exit()
+                print("\n[ERROR] NMEA thread died unexpectedly\n")
+                logging.error("NMEA thread terminated unexpectedly")
+                raise SystemExit(1)
             try:
                 if first_run:
                     time.sleep(THREAD_STARTUP_DELAY_SEC)
                     first_run = False
                 try:
-                    prompt = input('Press "Enter" to change course/speed or "Ctrl + c" to exit ...\n')
+                    prompt = input('Press "Enter" to change course/speed or "Ctrl+C" to exit...\n')
                 except KeyboardInterrupt:
                     handle_keyboard_interrupt()
                 if prompt == "":
@@ -271,10 +272,10 @@ class Menu:
         self.nmea_thread.start()
 
     def quit(self) -> NoReturn:
-        """Exit script.
+        """Exit script gracefully with proper cleanup.
 
         Displays exit message and terminates the application cleanly
-        with exit code 0.
+        with exit code 0. Provides opportunity for cleanup before exit.
 
         Returns:
             Never returns (NoReturn) - terminates the application
@@ -283,5 +284,12 @@ class Menu:
             SystemExit: Always exits with code 0
 
         """
-        print("\nExiting...\n")
-        sys.exit(0)
+        print("\n[INFO] Exiting...\n")
+
+        # Give threads a moment to finish current operations
+        if self.nmea_thread and self.nmea_thread.is_alive():
+            logging.info("Waiting for threads to finish...")
+            # Don't wait too long, daemon threads will be terminated anyway
+            self.nmea_thread.join(timeout=0.5)
+
+        raise SystemExit(0)

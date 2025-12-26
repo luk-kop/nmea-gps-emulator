@@ -3,7 +3,6 @@
 import logging
 import re
 import socket
-import sys
 import threading
 import time
 import uuid
@@ -110,13 +109,12 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaM
         try:
             s.bind((srv_ip_address, srv_port))
         except OSError as err:
-            print(f"\n*** Bind failed. Error: {err.strerror}. ***")
-            print(f"Change IP/port settings or try again in next {SOCKET_BIND_RETRY_MINUTES} minutes.")
+            print(f"\n[ERROR] Bind failed: {err.strerror}")
+            print(f"        Change IP/port settings or try again in {SOCKET_BIND_RETRY_MINUTES} minutes")
             exit_script()
-            # sys.exit()
         # Start listening on socket
         s.listen(MAX_TCP_CONNECTIONS)
-        print(f"\n*** Server listening on {srv_ip_address}:{srv_port}... ***\n")
+        print(f"\n[INFO] Server listening on {srv_ip_address}:{srv_port}\n")
         while True:
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
@@ -260,8 +258,8 @@ class NmeaSrvThread(threading.Thread):
                         self.conn.close()
                     if self.ip_add:
                         logging.info(f"Connection closed with {self.ip_add[0]}:{self.ip_add[1]}")
-                    # Close thread
-                    sys.exit()
+                    # Exit thread cleanly
+                    return
             safe_sleep_with_timing_check(NMEA_SEND_INTERVAL_SEC, timer_start, self.name)
 
 
@@ -311,7 +309,7 @@ class NmeaStreamThread(NmeaSrvThread):
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((self.stream_ip_add, self.port))
-                    print(f"\n*** Sending NMEA data - TCP stream to {self.stream_ip_add}:{self.port}... ***\n")
+                    print(f"\n[INFO] Sending NMEA data via TCP stream to {self.stream_ip_add}:{self.port}\n")
                     while True:
                         timer_start: float = time.perf_counter()
                         with self._lock:
@@ -334,11 +332,11 @@ class NmeaStreamThread(NmeaSrvThread):
                 ConnectionRefusedError,
                 BrokenPipeError,
             ) as err:
-                print(f"\n*** Error: {err.strerror} ***\n")
+                print(f"\n[ERROR] {err.strerror}\n")
                 exit_script()
         elif self.proto == "udp":
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                print(f"\n*** Sending NMEA data - UDP stream to {self.stream_ip_add}:{self.port}... ***\n")
+                print(f"\n[INFO] Sending NMEA data via UDP stream to {self.stream_ip_add}:{self.port}\n")
                 while True:
                     timer_start: float = time.perf_counter()  # type: ignore[no-redef]
                     with self._lock:
@@ -355,7 +353,7 @@ class NmeaStreamThread(NmeaSrvThread):
                                 s.sendto(nmea.encode(), (self.stream_ip_add, self.port))
                                 time.sleep(NMEA_SENTENCE_DELAY_SEC)
                             except OSError as err:
-                                print(f"*** Error: {err.strerror} ***")
+                                print(f"[ERROR] {err.strerror}")
                                 exit_script()
                         # Start next loop after 1 sec
                     safe_sleep_with_timing_check(NMEA_SEND_INTERVAL_SEC, timer_start, "UDP-Stream")
@@ -415,10 +413,11 @@ class NmeaSerialThread(NmeaSrvThread):
                 timeout=self.serial_config["timeout"],
             ) as ser:
                 print(
-                    f"Serial port settings: {self.serial_config['port']} {self.serial_config['baudrate']} "
+                    f"[INFO] Serial port: {self.serial_config['port']} "
+                    f"{self.serial_config['baudrate']} "
                     f"{self.serial_config['bytesize']}{self.serial_config['parity']}{self.serial_config['stopbits']}"
                 )
-                print("Sending NMEA data...")
+                print("[INFO] Sending NMEA data...\n")
                 while True:
                     timer_start: float = time.perf_counter()
                     with self._lock:
