@@ -51,7 +51,7 @@ select = ["E", "F", "W", "N", "I", "UP", "S", "D", "B", "A", "C4", "SIM"]
 ignore = ["S311"]  # S311: random is fine for non-crypto use
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D102"]  # Missing docstring in public module/method
+"tests/*" = ["D100", "D102", "S104"]
 
 [tool.ruff.format]
 quote-style = "double"
