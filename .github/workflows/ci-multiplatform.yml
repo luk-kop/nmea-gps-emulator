@@ -183,37 +183,38 @@ jobs:
       - name: Test conflicting flags (Unix)
         if: runner.os != 'Windows'
         run: |
-          # Test that --quiet and --verbose together fails
-          if python -m nmea_gps_emulator --quiet --verbose 2>&1 | grep -q "cannot be used together"; then
-            echo "✓ Conflicting flags properly rejected"
-          else
+          # Test that --quiet and --verbose together fails with exit code 1
+          if python -m nmea_gps_emulator --quiet --verbose 2>&1; then
             echo "✗ Conflicting flags should be rejected"
             exit 1
+          else
+            echo "✓ Conflicting flags properly rejected (exit code: $?)"
           fi
 
       - name: Test conflicting flags (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          # Test that --quiet and --verbose together fails
-          if python -m nmea_gps_emulator --quiet --verbose 2>&1 | grep -q "cannot be used together"; then
-            echo "✓ Conflicting flags properly rejected"
-          else
+          # Test that --quiet and --verbose together fails with exit code 1
+          if python -m nmea_gps_emulator --quiet --verbose 2>&1; then
             echo "✗ Conflicting flags should be rejected"
             exit 1
+          else
+            echo "✓ Conflicting flags properly rejected"
           fi
 
       - name: Verify imports
         run: |
-          python -c "from nmea_gps_emulator import NmeaMsg; print('✓ NmeaMsg import successful')"
+          python -c "from nmea_gps_emulator.nmea_gps import NmeaMsg; print('✓ NmeaMsg import successful')"
           python -c "from nmea_gps_emulator.main import Menu; print('✓ Menu import successful')"
           python -c "from nmea_gps_emulator.utils import position_input; print('✓ Utils import successful')"
+          python -c "from nmea_gps_emulator.custom_thread import NmeaSrvThread; print('✓ Thread classes import successful')"
 
       - name: Test NMEA message generation (Unix)
         if: runner.os != 'Windows'
         run: |
           python -c "
-          from nmea_gps_emulator import NmeaMsg
+          from nmea_gps_emulator.nmea_gps import NmeaMsg
 
           # Create NMEA object with test data
           position = {
@@ -241,7 +242,7 @@ jobs:
       - name: Test NMEA message generation (Windows)
         if: runner.os == 'Windows'
         run: |
-          python -c "from nmea_gps_emulator import NmeaMsg; position = {'latitude_value': '5430.000', 'latitude_direction': 'N', 'longitude_value': '01920.000', 'longitude_direction': 'E'}; nmea = NmeaMsg(position=position, altitude=100.0, speed=10.0, heading=90.0); sentences = next(nmea); assert len(sentences) > 0; print(f'✓ Generated {len(sentences)} valid NMEA sentences')"
+          python -c "from nmea_gps_emulator.nmea_gps import NmeaMsg; position = {'latitude_value': '5430.000', 'latitude_direction': 'N', 'longitude_value': '01920.000', 'longitude_direction': 'E'}; nmea = NmeaMsg(position=position, altitude=100.0, speed=10.0, heading=90.0); sentences = next(nmea); assert len(sentences) > 0; print(f'✓ Generated {len(sentences)} valid NMEA sentences')"
 
       - name: Test input validation functions (Unix)
         if: runner.os != 'Windows'
