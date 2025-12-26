@@ -249,7 +249,7 @@ class NmeaSrvThread(threading.Thread):
                 if len(thread_list) > 1 and current_thread_name != thread_list[0]:
                     nmea_list: list[str] = [f"{_}" for _ in self.nmea_object.nmea_sentences]
                 else:
-                    nmea_list: list[str] = [f"{_}" for _ in next(self.nmea_object)]
+                    nmea_list: list[str] = [f"{_}" for _ in next(self.nmea_object)]  # type: ignore[no-redef]
                 try:
                     for nmea in nmea_list:
                         if self.conn:
@@ -340,7 +340,7 @@ class NmeaStreamThread(NmeaSrvThread):
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                 print(f"\n*** Sending NMEA data - UDP stream to {self.stream_ip_add}:{self.port}... ***\n")
                 while True:
-                    timer_start: float = time.perf_counter()
+                    timer_start: float = time.perf_counter()  # type: ignore[no-redef]
                     with self._lock:
                         # Nmea object speed and heading update
                         if self.heading and self.heading != self._heading_cache:
@@ -349,7 +349,7 @@ class NmeaStreamThread(NmeaSrvThread):
                         if self.speed and self.speed != self._speed_cache:
                             self.nmea_object.speed_targeted = self.speed
                             self._speed_cache = self.speed
-                        nmea_list: list[str] = [f"{_}" for _ in next(self.nmea_object)]
+                        nmea_list: list[str] = [f"{_}" for _ in next(self.nmea_object)]  # type: ignore[no-redef]
                         for nmea in nmea_list:
                             try:
                                 s.sendto(nmea.encode(), (self.stream_ip_add, self.port))
