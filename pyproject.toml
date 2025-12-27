@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "nmea-gps-emulator"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A GPS receiver emulator that generates NMEA 0183 sentences"
 readme = "README.md"
 license = "MIT"
@@ -56,3 +56,9 @@ ignore = ["S311"]  # S311: random is fine for non-crypto use
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/nmea_gps_emulator/_version.py"
