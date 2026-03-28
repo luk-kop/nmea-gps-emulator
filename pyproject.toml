@@ -24,14 +24,14 @@ classifiers = [
     "Topic :: System :: Emulators",
 ]
 dependencies = [
-    "psutil>=7.1",
+    "psutil>=7.2",
     "pyproj>=3.7",
     "pyserial>=3.5",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.14",
+    "ruff>=0.15",
     "pre-commit",
 ]
 
