@@ -23,6 +23,8 @@ env:
   DEFAULT_PYTHON: "3.12"
   SRC_DIR: src/nmea_gps_emulator
   TEST_DIR: tests
+  # Ignored vulnerabilities in pip-audit (transitive deps, not in distributed package)
+  PIP_AUDIT_IGNORE: "--ignore-vuln CVE-2026-4539"
 
 jobs:
   gate:
@@ -75,7 +77,7 @@ jobs:
           pip install pip-audit
 
       - name: Run pip-audit
-        run: pip-audit
+        run: pip-audit --skip-editable ${{ env.PIP_AUDIT_IGNORE }}
 
       - name: Check for secrets (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
