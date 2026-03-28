@@ -2,6 +2,7 @@
 .idea/
 .vscode/
 .claude/
+.kiro/
 
 # Python
 __pycache__/
@@ -13,6 +14,7 @@ venv/
 .ruff_cache/
 python/
 dist/
+.mypy_cache/
 
 # Pytest
 .coverage

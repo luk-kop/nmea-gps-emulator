@@ -25,7 +25,14 @@ env:
   TEST_DIR: tests
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    if: "!(github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/github_actions/'))"
+    steps:
+      - run: echo "Running CI"
+
   lint:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -49,6 +56,7 @@ jobs:
         run: mypy ${{ env.SRC_DIR }} --ignore-missing-imports
 
   security:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -75,7 +83,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   test:
-    needs: lint
+    needs: [gate, lint]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -108,7 +116,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
-    needs: [lint, test]
+    needs: [gate, lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

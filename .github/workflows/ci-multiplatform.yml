@@ -25,7 +25,14 @@ env:
   TEST_DIR: tests
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    if: "!(github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/github_actions/'))"
+    steps:
+      - run: echo "Running CI"
+
   lint:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -49,6 +56,7 @@ jobs:
         run: mypy ${{ env.SRC_DIR }} --ignore-missing-imports
 
   security:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -75,7 +83,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   test:
-    needs: lint
+    needs: [gate, lint]
     strategy:
       fail-fast: false
       matrix:
@@ -113,7 +121,7 @@ jobs:
 
   # Platform-specific smoke tests
   platform-smoke-tests:
-    needs: test
+    needs: [gate, test]
     strategy:
       fail-fast: false
       matrix:
@@ -295,7 +303,7 @@ jobs:
           python -c "import platform; print(f'Platform: {platform.system()}'); print(f'Python: {platform.python_version()}'); print(f'Architecture: {platform.machine()}')"
 
   build:
-    needs: [lint, test, platform-smoke-tests]
+    needs: [gate, lint, test, platform-smoke-tests]
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -341,12 +349,16 @@ jobs:
 
   # Summary job to check overall status
   ci-success:
-    needs: [lint, security, test, platform-smoke-tests, build]
+    needs: [gate, lint, security, test, platform-smoke-tests, build]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check CI status
         run: |
+          if [ "${{ needs.gate.result }}" == "skipped" ]; then
+            echo "✅ CI skipped (dependabot github-actions PR)"
+            exit 0
+          fi
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.security.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ] || \
