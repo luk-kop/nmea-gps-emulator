@@ -120,7 +120,6 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaM
         # Start listening on socket
         s.listen(MAX_TCP_CONNECTIONS)
         logging.info(f"Server listening on {srv_ip_address}:{srv_port}")
-        print(f"\nServer ready on {srv_ip_address}:{srv_port}\n")
         while True:
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
@@ -322,7 +321,6 @@ class NmeaStreamThread(NmeaSrvThread):
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((self.stream_ip_add, self.port))
                     logging.info(f"TCP stream established to {self.stream_ip_add}:{self.port}")
-                    print(f"\nSending NMEA data via TCP to {self.stream_ip_add}:{self.port}\n")
                     while True:
                         timer_start: float = time.perf_counter()
                         with self._lock:
@@ -351,7 +349,6 @@ class NmeaStreamThread(NmeaSrvThread):
         elif self.proto == "udp":
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                 logging.info(f"UDP stream established to {self.stream_ip_add}:{self.port}")
-                print(f"\nSending NMEA data via UDP to {self.stream_ip_add}:{self.port}\n")
                 while True:
                     timer_start: float = time.perf_counter()  # type: ignore[no-redef]
                     with self._lock:
@@ -436,7 +433,6 @@ class NmeaSerialThread(NmeaSrvThread):
                     f"{self.serial_config['baudrate']} "
                     f"{self.serial_config['bytesize']}{self.serial_config['parity']}{self.serial_config['stopbits']}"
                 )
-                print(f"\nSending NMEA data on {self.serial_config['port']}\n")
                 while True:
                     timer_start: float = time.perf_counter()
                     with self._lock:
