@@ -43,19 +43,23 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
-          cache: 'pip'
 
-      - name: Install linters
-        run: pip install ruff mypy
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --python ${{ env.DEFAULT_PYTHON }} --extra dev
 
       - name: Run ruff check
-        run: ruff check ${{ env.SRC_DIR }} ${{ env.TEST_DIR }}
+        run: uv run ruff check ${{ env.SRC_DIR }} ${{ env.TEST_DIR }}
 
       - name: Run ruff format check
-        run: ruff format --check ${{ env.SRC_DIR }} ${{ env.TEST_DIR }}
+        run: uv run ruff format --check ${{ env.SRC_DIR }} ${{ env.TEST_DIR }}
 
       - name: Run mypy
-        run: mypy ${{ env.SRC_DIR }} --ignore-missing-imports
+        run: uv run python -m mypy ${{ env.SRC_DIR }} --ignore-missing-imports
 
   security:
     needs: gate
@@ -69,18 +73,20 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
-          cache: 'pip'
 
-      - name: Install dependencies
-        run: |
-          pip install -e .
-          pip install pip-audit
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --python ${{ env.DEFAULT_PYTHON }} --extra dev
 
       - name: Run pip-audit
-        run: pip-audit --skip-editable ${{ env.PIP_AUDIT_IGNORE }}
+        run: uv run pip-audit --skip-editable ${{ env.PIP_AUDIT_IGNORE }}
 
       - name: Check for secrets (Gitleaks)
-        uses: gitleaks/gitleaks-action@v2.3.9
+        uses: gitleaks/gitleaks-action@v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -101,21 +107,24 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest pytest-cov
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --python ${{ matrix.python-version }} --extra dev
 
       - name: Run tests with coverage
-        run: pytest ${{ env.TEST_DIR }} -v --cov=${{ env.SRC_DIR }} --cov-report=xml
+        run: uv run pytest ${{ env.TEST_DIR }} -v --cov=${{ env.SRC_DIR }} --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
         with:
           files: coverage.xml
+          disable_search: true
+          plugins: noop
           fail_ci_if_error: false
           flags: ${{ matrix.os }}-py${{ matrix.python-version }}
           name: ${{ matrix.os }}-py${{ matrix.python-version }}
@@ -138,64 +147,68 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
-          cache: 'pip'
 
-      - name: Install package
-        run: pip install -e .
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --python ${{ env.DEFAULT_PYTHON }}
 
       - name: Test CLI help (Unix)
         if: runner.os != 'Windows'
         run: |
-          nmea-gps-emulator --help
-          python -m nmea_gps_emulator --help
+          uv run nmea-gps-emulator --help
+          uv run python -m nmea_gps_emulator --help
 
       - name: Test CLI help (Windows)
         if: runner.os == 'Windows'
         run: |
-          nmea-gps-emulator --help
-          python -m nmea_gps_emulator --help
+          uv run nmea-gps-emulator --help
+          uv run python -m nmea_gps_emulator --help
 
       - name: Test CLI flags (Unix)
         if: runner.os != 'Windows'
         run: |
           # Test --quiet flag
-          python -m nmea_gps_emulator --quiet --help
+          uv run python -m nmea_gps_emulator --quiet --help
           echo "[OK] --quiet flag works"
 
           # Test --verbose flag
-          python -m nmea_gps_emulator --verbose --help
+          uv run python -m nmea_gps_emulator --verbose --help
           echo "[OK] --verbose flag works"
 
           # Test short flags
-          python -m nmea_gps_emulator -q --help
+          uv run python -m nmea_gps_emulator -q --help
           echo "[OK] -q flag works"
 
-          python -m nmea_gps_emulator -v --help
+          uv run python -m nmea_gps_emulator -v --help
           echo "[OK] -v flag works"
 
       - name: Test CLI flags (Windows)
         if: runner.os == 'Windows'
         run: |
           # Test --quiet flag
-          python -m nmea_gps_emulator --quiet --help
+          uv run python -m nmea_gps_emulator --quiet --help
           echo "[OK] --quiet flag works"
 
           # Test --verbose flag
-          python -m nmea_gps_emulator --verbose --help
+          uv run python -m nmea_gps_emulator --verbose --help
           echo "[OK] --verbose flag works"
 
           # Test short flags
-          python -m nmea_gps_emulator -q --help
+          uv run python -m nmea_gps_emulator -q --help
           echo "[OK] -q flag works"
 
-          python -m nmea_gps_emulator -v --help
+          uv run python -m nmea_gps_emulator -v --help
           echo "[OK] -v flag works"
 
       - name: Test conflicting flags (Unix)
         if: runner.os != 'Windows'
         run: |
           # Test that --quiet and --verbose together fails with exit code 1
-          if python -m nmea_gps_emulator --quiet --verbose 2>&1; then
+          if uv run python -m nmea_gps_emulator --quiet --verbose 2>&1; then
             echo "[FAIL] Conflicting flags should be rejected"
             exit 1
           else
@@ -207,7 +220,7 @@ jobs:
         shell: bash
         run: |
           # Test that --quiet and --verbose together fails with exit code 1
-          if python -m nmea_gps_emulator --quiet --verbose 2>&1; then
+          if uv run python -m nmea_gps_emulator --quiet --verbose 2>&1; then
             echo "[FAIL] Conflicting flags should be rejected"
             exit 1
           else
@@ -216,15 +229,15 @@ jobs:
 
       - name: Verify imports
         run: |
-          python -c "from nmea_gps_emulator.nmea_gps import NmeaMsg; print('[OK] NmeaMsg import successful')"
-          python -c "from nmea_gps_emulator.main import Menu; print('[OK] Menu import successful')"
-          python -c "from nmea_gps_emulator.utils import position_input; print('[OK] Utils import successful')"
-          python -c "from nmea_gps_emulator.custom_thread import NmeaSrvThread; print('[OK] Thread classes import successful')"
+          uv run python -c "from nmea_gps_emulator.nmea_gps import NmeaMsg; print('[OK] NmeaMsg import successful')"
+          uv run python -c "from nmea_gps_emulator.main import Menu; print('[OK] Menu import successful')"
+          uv run python -c "from nmea_gps_emulator.utils import position_input; print('[OK] Utils import successful')"
+          uv run python -c "from nmea_gps_emulator.custom_thread import NmeaSrvThread; print('[OK] Thread classes import successful')"
 
       - name: Test NMEA message generation (Unix)
         if: runner.os != 'Windows'
         run: |
-          python -c "
+          uv run python -c "
           from nmea_gps_emulator.nmea_gps import NmeaMsg
 
           # Create NMEA object with test data
@@ -254,12 +267,12 @@ jobs:
       - name: Test NMEA message generation (Windows)
         if: runner.os == 'Windows'
         run: |
-          python -c "from nmea_gps_emulator.nmea_gps import NmeaMsg; position = {'latitude_value': '5430.000', 'latitude_direction': 'N', 'longitude_value': '01920.000', 'longitude_direction': 'E'}; nmea = NmeaMsg(position=position, altitude=100.0, speed=10.0, heading=90.0); sentences = next(nmea); assert len(sentences) > 0; sentence_strs = [str(s) for s in sentences]; assert all(s.startswith('$') and '*' in s for s in sentence_strs); print(f'[OK] Generated {len(sentences)} valid NMEA sentences')"
+          uv run python -c "from nmea_gps_emulator.nmea_gps import NmeaMsg; position = {'latitude_value': '5430.000', 'latitude_direction': 'N', 'longitude_value': '01920.000', 'longitude_direction': 'E'}; nmea = NmeaMsg(position=position, altitude=100.0, speed=10.0, heading=90.0); sentences = next(nmea); assert len(sentences) > 0; sentence_strs = [str(s) for s in sentences]; assert all(s.startswith('$') and '*' in s for s in sentence_strs); print(f'[OK] Generated {len(sentences)} valid NMEA sentences')"
 
       - name: Test input validation functions (Unix)
         if: runner.os != 'Windows'
         run: |
-          python -c "
+          uv run python -c "
           import re
           from nmea_gps_emulator.utils import position_input, heading_input, speed_input
 
@@ -287,12 +300,12 @@ jobs:
       - name: Test input validation functions (Windows)
         if: runner.os == 'Windows'
         run: |
-          python -c "import re; position_regex = re.compile(r'^(([0-8]\d[0-5]\d|9000)(N|S|n|s)\s?(([0-1][0-7]\d[0-5]\d)|(0[0-9]\d[0-5]\d)|18000)(E|W|e|w))$', re.VERBOSE); assert position_regex.match('5430N 01920E'); print('[OK] Input validation works')"
+          uv run python -c "import re; position_regex = re.compile(r'^(([0-8]\d[0-5]\d|9000)(N|S|n|s)\s?(([0-1][0-7]\d[0-5]\d)|(0[0-9]\d[0-5]\d)|18000)(E|W|e|w))$', re.VERBOSE); assert position_regex.match('5430N 01920E'); print('[OK] Input validation works')"
 
       - name: Check platform detection (Unix)
         if: runner.os != 'Windows'
         run: |
-          python -c "
+          uv run python -c "
           import platform
           print(f'Platform: {platform.system()}')
           print(f'Python: {platform.python_version()}')
@@ -302,7 +315,7 @@ jobs:
       - name: Check platform detection (Windows)
         if: runner.os == 'Windows'
         run: |
-          python -c "import platform; print(f'Platform: {platform.system()}'); print(f'Python: {platform.python_version()}'); print(f'Architecture: {platform.machine()}')"
+          uv run python -c "import platform; print(f'Platform: {platform.system()}'); print(f'Python: {platform.python_version()}'); print(f'Architecture: {platform.machine()}')"
 
   build:
     needs: [gate, lint, test, platform-smoke-tests]
@@ -321,26 +334,29 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
-          cache: 'pip'
 
-      - name: Install build tools
-        run: pip install build
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
 
       - name: Build package
-        run: python -m build
+        run: uv build
 
       - name: Verify wheel installation (Unix)
         if: runner.os != 'Windows'
         run: |
-          pip install dist/*.whl
-          nmea-gps-emulator --help
+          uv venv --python ${{ env.DEFAULT_PYTHON }}
+          uv pip install dist/*.whl
+          .venv/bin/nmea-gps-emulator --help
 
       - name: Verify wheel installation (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          pip install dist/*.whl
-          nmea-gps-emulator --help
+          uv venv --python ${{ env.DEFAULT_PYTHON }}
+          uv pip install dist/*.whl
+          .venv/Scripts/nmea-gps-emulator.exe --help
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7

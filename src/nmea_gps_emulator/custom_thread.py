@@ -25,7 +25,8 @@ from .utils import exit_script
 
 
 def safe_sleep_with_timing_check(target_interval: float, timer_start: float, thread_name: str = "") -> None:
-    """Safely sleep for the remaining time in a target interval with timing validation.
+    """
+    Safely sleep for the remaining time in a target interval with timing validation.
 
     Calculates the remaining sleep time and ensures it's never negative. Logs warnings
     if loop execution time exceeds expected thresholds.
@@ -60,7 +61,8 @@ def safe_sleep_with_timing_check(target_interval: float, timer_start: float, thr
 
 
 def validate_timing_performance(elapsed_time: float, thread_name: str = "") -> None:
-    """Validate timing performance and log issues.
+    """
+    Validate timing performance and log issues.
 
     Checks if loop execution time is within acceptable bounds and logs
     appropriate warnings or errors for timing issues.
@@ -86,7 +88,8 @@ def validate_timing_performance(elapsed_time: float, thread_name: str = "") -> N
 
 
 def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaMsg) -> NoReturn:
-    """Start TCP (telnet) server thread sending NMEA data to connected clients.
+    """
+    Start TCP (telnet) server thread sending NMEA data to connected clients.
 
     Creates a TCP server socket that listens for incoming connections and spawns
     individual NmeaSrvThread instances for each client connection. Manages up to
@@ -107,6 +110,7 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaM
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # Bind socket to local host and port.
         try:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((srv_ip_address, srv_port))
         except OSError as err:
             print(f"\n[ERROR] Bind failed: {err.strerror}")
@@ -116,7 +120,6 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaM
         # Start listening on socket
         s.listen(MAX_TCP_CONNECTIONS)
         logging.info(f"Server listening on {srv_ip_address}:{srv_port}")
-        print(f"\nServer ready on {srv_ip_address}:{srv_port}\n")
         while True:
             # Scripts waiting for client calls
             # The server is blocked (suspended) and is waiting for a client connection.
@@ -144,7 +147,8 @@ def run_telnet_server_thread(srv_ip_address: str, srv_port: int, nmea_obj: NmeaM
 
 
 class NmeaSrvThread(threading.Thread):
-    """A thread dedicated for TCP (telnet) server-client connection.
+    """
+    A thread dedicated for TCP (telnet) server-client connection.
 
     Base class for NMEA data transmission threads that provides thread-safe
     speed and heading updates using RLock synchronization. Handles individual
@@ -159,7 +163,8 @@ class NmeaSrvThread(threading.Thread):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        """Initialize NMEA server thread with connection and NMEA object.
+        """
+        Initialize NMEA server thread with connection and NMEA object.
 
         Args:
             nmea_object: NMEA message generator object
@@ -183,7 +188,8 @@ class NmeaSrvThread(threading.Thread):
         self._lock: threading.RLock = threading.RLock()
 
     def set_speed(self, speed: float) -> None:
-        """Set the target speed for the NMEA object.
+        """
+        Set the target speed for the NMEA object.
 
         Thread-safe method to update the target speed using RLock synchronization.
         The speed change will be applied gradually in the next NMEA update cycle.
@@ -199,7 +205,8 @@ class NmeaSrvThread(threading.Thread):
             self.speed = speed
 
     def set_heading(self, heading: float) -> None:
-        """Set the target heading for the NMEA object.
+        """
+        Set the target heading for the NMEA object.
 
         Thread-safe method to update the target heading using RLock synchronization.
         The heading change will be applied gradually in the next NMEA update cycle.
@@ -215,7 +222,8 @@ class NmeaSrvThread(threading.Thread):
             self.heading = heading
 
     def run(self) -> None:
-        """Execute main thread loop for sending NMEA data.
+        """
+        Execute main thread loop for sending NMEA data.
 
         Main execution loop that handles NMEA data generation and transmission
         to connected clients. Manages thread synchronization to ensure consistent
@@ -264,7 +272,8 @@ class NmeaSrvThread(threading.Thread):
 
 
 class NmeaStreamThread(NmeaSrvThread):
-    """A thread dedicated for TCP or UDP stream connection.
+    """
+    A thread dedicated for TCP or UDP stream connection.
 
     Extends NmeaSrvThread to provide client-side streaming functionality
     for sending NMEA data to remote servers via TCP or UDP protocols.
@@ -272,7 +281,8 @@ class NmeaStreamThread(NmeaSrvThread):
     """
 
     def __init__(self, proto: str, port: int, ip_add: str, *args: Any, **kwargs: Any) -> None:
-        """Initialize NMEA stream thread with protocol and port configuration.
+        """
+        Initialize NMEA stream thread with protocol and port configuration.
 
         Args:
             proto: Protocol type - either "tcp" or "udp"
@@ -292,7 +302,8 @@ class NmeaStreamThread(NmeaSrvThread):
         self.stream_ip_add: str = ip_add
 
     def run(self) -> None:
-        """Execute TCP or UDP stream connection.
+        """
+        Execute TCP or UDP stream connection.
 
         Establishes connection to remote server and continuously streams NMEA data
         using the specified protocol (TCP or UDP). Handles connection errors and
@@ -310,7 +321,6 @@ class NmeaStreamThread(NmeaSrvThread):
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((self.stream_ip_add, self.port))
                     logging.info(f"TCP stream established to {self.stream_ip_add}:{self.port}")
-                    print(f"\nSending NMEA data via TCP to {self.stream_ip_add}:{self.port}\n")
                     while True:
                         timer_start: float = time.perf_counter()
                         with self._lock:
@@ -339,7 +349,6 @@ class NmeaStreamThread(NmeaSrvThread):
         elif self.proto == "udp":
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                 logging.info(f"UDP stream established to {self.stream_ip_add}:{self.port}")
-                print(f"\nSending NMEA data via UDP to {self.stream_ip_add}:{self.port}\n")
                 while True:
                     timer_start: float = time.perf_counter()  # type: ignore[no-redef]
                     with self._lock:
@@ -364,7 +373,8 @@ class NmeaStreamThread(NmeaSrvThread):
 
 
 class NmeaSerialThread(NmeaSrvThread):
-    """A thread dedicated for serial connection.
+    """
+    A thread dedicated for serial connection.
 
     Extends NmeaSrvThread to provide serial port communication functionality
     for sending NMEA data over RS-232/USB serial connections. Handles serial
@@ -372,7 +382,8 @@ class NmeaSerialThread(NmeaSrvThread):
     """
 
     def __init__(self, serial_config: dict[str, str | int], *args: Any, **kwargs: Any) -> None:
-        """Initialize NMEA serial thread with serial port configuration.
+        """
+        Initialize NMEA serial thread with serial port configuration.
 
         Args:
             serial_config: Dictionary containing serial port settings with keys:
@@ -393,7 +404,8 @@ class NmeaSerialThread(NmeaSrvThread):
         self.serial_config: dict[str, str | int] = serial_config
 
     def run(self) -> None:
-        """Execute serial connection for NMEA data transmission.
+        """
+        Execute serial connection for NMEA data transmission.
 
         Opens serial port with specified configuration and continuously transmits
         NMEA data. Handles serial port errors and provides helpful error messages
@@ -421,7 +433,6 @@ class NmeaSerialThread(NmeaSrvThread):
                     f"{self.serial_config['baudrate']} "
                     f"{self.serial_config['bytesize']}{self.serial_config['parity']}{self.serial_config['stopbits']}"
                 )
-                print(f"\nSending NMEA data on {self.serial_config['port']}\n")
                 while True:
                     timer_start: float = time.perf_counter()
                     with self._lock:

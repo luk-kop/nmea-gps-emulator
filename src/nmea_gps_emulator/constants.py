@@ -1,5 +1,30 @@
 """Constants used throughout the NMEA GPS Emulator."""
 
+import re
+from re import Pattern
+
+# Validation patterns
+POSITION_REGEX: Pattern[str] = re.compile(
+    r"""^(
+    ([0-8]\d[0-5]\d|9000)                               # Latitude
+    (N|S|n|s)
+    \s?
+    (([0-1][0-7]\d[0-5]\d)|(0[0-9]\d[0-5]\d)|18000)     # Longitude
+    (E|W|e|w)
+    )$""",
+    re.VERBOSE,
+)
+
+IPV4_REGEX: Pattern[str] = re.compile(
+    r"""^
+    (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.
+    (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.
+    (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.
+    (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])
+    $""",
+    re.VERBOSE,
+)
+
 # Network
 MAX_TCP_CONNECTIONS: int = 10
 DEFAULT_NMEA_PORT: int = 10110
@@ -10,6 +35,7 @@ DEFAULT_REMOTE_IP: str = "127.0.0.1"
 NMEA_SEND_INTERVAL_SEC: int = 1
 NMEA_SENTENCE_DELAY_SEC: float = 0.05
 THREAD_STARTUP_DELAY_SEC: int = 2
+THREAD_HEALTHCHECK_INTERVAL_SEC: float = 1.0
 SCRIPT_EXIT_DELAY_SEC: int = 1
 SOCKET_BIND_RETRY_MINUTES: int = 2
 

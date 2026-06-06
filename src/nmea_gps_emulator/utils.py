@@ -23,10 +23,12 @@ from .constants import (
     SCRIPT_EXIT_DELAY_SEC,
     SUPPORTED_BAUDRATES,
 )
+from .validators import parse_heading, parse_position, parse_speed
 
 
 def handle_keyboard_interrupt() -> NoReturn:
-    """Handle KeyboardInterrupt by printing a closing message and exiting.
+    """
+    Handle KeyboardInterrupt by printing a closing message and exiting.
 
     This function provides a consistent way to handle user interrupts
     (Ctrl+C) throughout the application.
@@ -40,7 +42,8 @@ def handle_keyboard_interrupt() -> NoReturn:
 
 
 def safe_input(prompt: str, default: str | None = None) -> str:
-    """Safe input function that handles KeyboardInterrupt consistently.
+    """
+    Safe input function that handles KeyboardInterrupt consistently.
 
     Args:
         prompt: The input prompt to display
@@ -63,7 +66,8 @@ def safe_input(prompt: str, default: str | None = None) -> str:
 
 
 def exit_script() -> None:
-    """Terminate the script from inside a child thread.
+    """
+    Terminate the script from inside a child thread.
 
     Uses psutil to terminate the main process, allowing child threads
     to gracefully shut down the application.
@@ -79,54 +83,61 @@ def exit_script() -> None:
     current_script.terminate()
 
 
-def position_input() -> dict[str, str]:
-    """Prompt user for GPS position and validate the input.
+def _position_to_compact(position: dict[str, str]) -> str:
+    """
+    Render a parsed position dict back into compact ``5430N 01920E`` form.
+
+    Args:
+        position: Position dict as produced by :func:`parse_position`.
+
+    Returns:
+        Compact position string suitable for display as a prompt default.
+
+    """
+    lat = position["latitude_value"].split(".")[0]
+    lon = position["longitude_value"].split(".")[0]
+    return f"{lat}{position['latitude_direction']} {lon}{position['longitude_direction']}"
+
+
+def position_input(default: dict[str, str] | None = None) -> dict[str, str]:
+    """
+    Prompt user for GPS position and validate the input.
 
     Accepts GPS coordinates in the format "5430N 01920E" and validates
-    them against proper latitude/longitude ranges. Returns default position
-    if user presses Enter without input.
+    them against proper latitude/longitude ranges. Returns the default
+    position if user presses Enter without input.
+
+    Args:
+        default: Position dict to use when the user presses Enter without
+            input. Falls back to DEFAULT_POSITION when None.
 
     Returns:
         Dictionary with keys: latitude_value, latitude_direction,
-        longitude_value, longitude_direction. Returns DEFAULT_POSITION
+        longitude_value, longitude_direction. Returns the default position
         if user presses Enter without input.
 
     Raises:
         SystemExit: If user presses Ctrl+C (handled by safe_input)
 
     """
+    effective_default = default if default is not None else DEFAULT_POSITION
     while True:
         print("\nEnter unit position (format: 5430N 01920E)")
-        print("Default: 5430N 01920E")
+        print(f"Default: {_position_to_compact(effective_default)}")
         position_data: str = safe_input("> ", "")
 
         if position_data == "":
-            return DEFAULT_POSITION.copy()
+            return effective_default.copy()
 
-        position_regex_pattern: Pattern[str] = re.compile(
-            r"""^(
-            ([0-8]\d[0-5]\d|9000)                               # Latitude
-            (N|S|n|s)
-            \s?
-            (([0-1][0-7]\d[0-5]\d)|(0[0-9]\d[0-5]\d)|18000)     # Longitude
-            (E|W|e|w)
-            )$""",
-            re.VERBOSE,
-        )
-        mo: Match[str] | None = position_regex_pattern.fullmatch(position_data)
-        if mo:
-            position_dict: dict[str, str] = {
-                "latitude_value": f"{float(mo.group(2)):08.3f}",
-                "latitude_direction": mo.group(3),
-                "longitude_value": f"{float(mo.group(4)):09.3f}",
-                "longitude_direction": mo.group(7),
-            }
-            return position_dict
-        print("[ERROR] Invalid position format. Use: 5430N 01920E")
+        try:
+            return parse_position(position_data)
+        except ValueError:
+            print("[ERROR] Invalid position format. Use: 5430N 01920E")
 
 
 def ip_port_input(option: str) -> tuple[str, int]:
-    """Ask for IP address and port number for connection.
+    """
+    Ask for IP address and port number for connection.
 
     Prompts user for IP:port combination based on the connection type
     (telnet server or stream client) and validates the format.
@@ -199,7 +210,8 @@ def ip_port_input(option: str) -> tuple[str, int]:
 
 
 def trans_proto_input() -> str:
-    """Ask for transport protocol for NMEA stream.
+    """
+    Ask for transport protocol for NMEA stream.
 
     Prompts user to choose between TCP and UDP protocols for streaming
     NMEA data. Defaults to TCP if user presses Enter.
@@ -223,11 +235,16 @@ def trans_proto_input() -> str:
         print("[ERROR] Invalid protocol. Enter 'tcp' or 'udp'")
 
 
-def heading_input() -> float:
-    """Ask for the unit's course.
+def heading_input(default: float | None = None) -> float:
+    """
+    Ask for the unit's course.
 
     Prompts user for heading/course value in degrees (0-359) and validates
     the input. Returns default heading if user presses Enter.
+
+    Args:
+        default: Heading to use when the user presses Enter without input.
+            Falls back to DEFAULT_HEADING when None.
 
     Returns:
         Course value in degrees (0.0-359.0)
@@ -236,27 +253,32 @@ def heading_input() -> float:
         SystemExit: If user presses Ctrl+C (handled by safe_input)
 
     """
+    effective_default = default if default is not None else DEFAULT_HEADING
     while True:
         print("\nEnter unit course (0-359 degrees)")
-        print(f"Default: {int(DEFAULT_HEADING):03d}")
+        print(f"Default: {int(effective_default):03d}")
         heading_data: str = safe_input("> ", "")
 
         if heading_data == "":
-            return DEFAULT_HEADING
+            return effective_default
 
-        heading_regex_pattern: str = r"(3[0-5]\d|[0-2]\d{2}|\d{1,2})"
-        mo: Match[str] | None = re.fullmatch(heading_regex_pattern, heading_data)
-        if mo:
-            return float(mo.group())
-        print("[ERROR] Invalid heading. Enter a value between 0 and 359 degrees")
+        try:
+            return parse_heading(heading_data)
+        except ValueError:
+            print("[ERROR] Invalid heading. Enter a value between 0 and 359 degrees")
 
 
-def speed_input() -> float:
-    """Ask for the unit's speed.
+def speed_input(default: float | None = None) -> float:
+    """
+    Ask for the unit's speed.
 
     Prompts user for speed value in knots (0-999) and validates the input.
     Returns default speed if user presses Enter. Handles leading zero
     normalization for proper float conversion.
+
+    Args:
+        default: Speed to use when the user presses Enter without input.
+            Falls back to DEFAULT_SPEED when None.
 
     Returns:
         Speed value in knots (0.0-999.0)
@@ -265,29 +287,24 @@ def speed_input() -> float:
         SystemExit: If user presses Ctrl+C (handled by safe_input)
 
     """
+    effective_default = default if default is not None else DEFAULT_SPEED
     while True:
         print("\nEnter unit speed (0-999 knots)")
-        print(f"Default: {DEFAULT_SPEED}")
+        print(f"Default: {effective_default}")
         speed_data: str = safe_input("> ", "")
 
         if speed_data == "":
-            return DEFAULT_SPEED
+            return effective_default
 
-        speed_regex_pattern: str = r"(\d{1,3}(\.\d+)?)"
-        mo: Match[str] | None = re.fullmatch(speed_regex_pattern, speed_data)
-        if mo:
-            match: str = mo.group()
-            if match.startswith("0") and match != "0" and not match.startswith("0."):
-                match = match.lstrip("0")
-            speed_value: float = float(match)
-            # Validate range
-            if 0 <= speed_value <= 999:
-                return speed_value
-        print("[ERROR] Invalid speed. Enter a value between 0 and 999 knots")
+        try:
+            return parse_speed(speed_data)
+        except ValueError:
+            print("[ERROR] Invalid speed. Enter a value between 0 and 999 knots")
 
 
 def heading_speed_input() -> tuple[float, float]:
-    """Ask for the unit's heading and speed (online).
+    """
+    Ask for the unit's heading and speed (online).
 
     Interactive function for updating course and speed while the emulator
     is running. Prompts for both values sequentially and validates input.
@@ -302,33 +319,27 @@ def heading_speed_input() -> tuple[float, float]:
     heading_new: float
     while True:
         heading_data: str = safe_input("New course (0-359 degrees) > ")
-        heading_regex_pattern: str = r"(3[0-5]\d|[0-2]\d{2}|\d{1,2})"
-        mo: Match[str] | None = re.fullmatch(heading_regex_pattern, heading_data)
-        if mo:
-            heading_new = float(mo.group())
+        try:
+            heading_new = parse_heading(heading_data)
             break
-        print("[ERROR] Invalid heading. Enter a value between 0 and 359 degrees")
+        except ValueError:
+            print("[ERROR] Invalid heading. Enter a value between 0 and 359 degrees")
 
     speed_new: float
     while True:
         speed_data: str = safe_input("New speed (0-999 knots) > ")
-        speed_regex_pattern: str = r"(\d{1,3}(\.\d+)?)"
-        mo = re.fullmatch(speed_regex_pattern, speed_data)
-        if mo:
-            match: str = mo.group()
-            if match.startswith("0") and match != "0" and not match.startswith("0."):
-                match = match.lstrip("0")
-            speed_new = float(match)
-            # Validate range
-            if 0 <= speed_new <= 999:
-                break
-        print("[ERROR] Invalid speed. Enter a value between 0 and 999 knots")
+        try:
+            speed_new = parse_speed(speed_data)
+            break
+        except ValueError:
+            print("[ERROR] Invalid speed. Enter a value between 0 and 999 knots")
 
     return heading_new, speed_new
 
 
 def serial_config_input() -> dict[str, str | int]:
-    """Ask for serial configuration.
+    """
+    Ask for serial configuration.
 
     Prompts user to configure serial port settings including port selection
     and baudrate. Automatically detects available ports and validates
