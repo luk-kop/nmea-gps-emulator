@@ -406,7 +406,7 @@ Pull requests must have a non-empty description and a semantic title such as `fi
 
 **Valid branch name prefixes:**
 
-- `feature/` - New features
+- `feature/` or `feat/` - New features
 - `fix/` or `bugfix/` - Bug fixes
 - `hotfix/` - Urgent fixes
 - `docs/` - Documentation changes

@@ -27,7 +27,7 @@ Tests use `pytest`, standard `unittest` classes, and Hypothesis property tests. 
 
 ## Commit & Pull Request Guidelines
 
-History and PR validation use semantic prefixes such as `ci:`, `docs:`, `fix:`, `test:`, `refactor:`, and `chore:`. Branch names must start with one of `feature/`, `fix/`, `bugfix/`, `hotfix/`, `docs/`, `chore/`, `refactor/`, `test/`, `release/`, `ci/`, or `dependabot/`. PRs require a non-empty description, a semantic title, passing CI, and no files over 10 MB. Link related issues when applicable and include CLI output or screenshots only when they clarify behavior changes.
+History and PR validation use semantic prefixes such as `ci:`, `docs:`, `fix:`, `test:`, `refactor:`, and `chore:`. Branch names must start with one of `feature/`, `feat/`, `fix/`, `bugfix/`, `hotfix/`, `docs/`, `chore/`, `refactor/`, `test/`, `release/`, `ci/`, or `dependabot/`. PRs require a non-empty description, a semantic title, passing CI, and no files over 10 MB. Link related issues when applicable and include CLI output or screenshots only when they clarify behavior changes.
 
 ## Security & Configuration Tips
 
