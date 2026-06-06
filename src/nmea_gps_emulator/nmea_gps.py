@@ -40,7 +40,8 @@ from .constants import (
 
 
 class NmeaMsg:
-    """The class represent a group of NMEA sentences.
+    """
+    The class represent a group of NMEA sentences.
 
     Main orchestrator class that generates and manages all NMEA sentence types,
     handles position updates using WGS84 geodetic calculations, and manages
@@ -48,7 +49,8 @@ class NmeaMsg:
     """
 
     def __init__(self, position: dict[str, str], altitude: float, speed: float, heading: float) -> None:
-        """Initialize NMEA message generator with position, altitude, speed, and heading.
+        """
+        Initialize NMEA message generator with position, altitude, speed, and heading.
 
         Args:
             position: Dictionary containing GPS coordinates with keys:
@@ -99,7 +101,8 @@ class NmeaMsg:
     def __next__(
         self,
     ) -> list[Gpgga | Gpgsa | Gpgsv | Gpgll | Gprmc | Gphdt | Gpvtg | Gpzda]:
-        """Generate next set of NMEA sentences with updated position and parameters.
+        """
+        Generate next set of NMEA sentences with updated position and parameters.
 
         Updates position based on elapsed time and current speed/heading,
         gradually adjusts heading and speed toward target values, and
@@ -129,7 +132,8 @@ class NmeaMsg:
         return self.nmea_sentences
 
     def __iter__(self) -> NmeaMsg:
-        """Return iterator for NMEA message generation.
+        """
+        Return iterator for NMEA message generation.
 
         Returns:
             Self as iterator object
@@ -138,7 +142,8 @@ class NmeaMsg:
         return self
 
     def __str__(self) -> str:
-        """Return formatted string of all NMEA sentences.
+        """
+        Return formatted string of all NMEA sentences.
 
         Returns:
             Concatenated string containing all NMEA sentences
@@ -150,7 +155,8 @@ class NmeaMsg:
         return nmea_msgs_str
 
     def position_update(self, utc_date_time_prev: datetime.datetime) -> None:
-        """Update position when unit in move.
+        """
+        Update position when unit in move.
 
         Calculates new GPS position based on elapsed time, current speed,
         and heading using WGS84 geodetic calculations. Handles coordinate
@@ -226,7 +232,8 @@ class NmeaMsg:
         self.position["longitude_direction"] = f"{lon_direction.upper()}"
 
     def _heading_update(self) -> None:
-        """Update the unit's heading (course) when changed by user.
+        """
+        Update the unit's heading (course) when changed by user.
 
         Gradually adjusts current heading toward target heading using
         incremental changes. Handles wraparound at 0/360 degrees and
@@ -276,7 +283,8 @@ class NmeaMsg:
         self.heading = round(head_current, 1)
 
     def _speed_update(self) -> None:
-        """Update the unit's speed when changed by user.
+        """
+        Update the unit's speed when changed by user.
 
         Gradually adjusts current speed toward target speed using
         incremental changes to simulate realistic acceleration/deceleration.
@@ -299,7 +307,8 @@ class NmeaMsg:
 
     @staticmethod
     def check_sum(data: str):
-        """Calculate NMEA checksum for given data string.
+        """
+        Calculate NMEA checksum for given data string.
 
         Performs XOR operation on all bytes between $ and * delimiters
         and returns checksum in hexadecimal notation.
@@ -324,7 +333,8 @@ class NmeaMsg:
 
 
 class Gpgga:
-    """Global Positioning System Fix Data.
+    """
+    Global Positioning System Fix Data.
 
     Provides essential GPS fix information including position, time,
     fix quality, number of satellites, and altitude data.
@@ -346,7 +356,8 @@ class Gpgga:
         dgps_last_update: str = "",
         dgps_ref_station_id: str = "",
     ) -> None:
-        """Initialize GPGGA sentence with position and satellite data.
+        """
+        Initialize GPGGA sentence with position and satellite data.
 
         Args:
             sats_count: Number of satellites used in position fix
@@ -375,7 +386,8 @@ class Gpgga:
 
     @property
     def utc_time(self) -> str:
-        """Get UTC time in HHMMSS format.
+        """
+        Get UTC time in HHMMSS format.
 
         Returns:
             UTC time as string in HHMMSS format
@@ -385,7 +397,8 @@ class Gpgga:
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
-        """Set UTC time from datetime object.
+        """
+        Set UTC time from datetime object.
 
         Args:
             value: Datetime object to extract time from
@@ -397,7 +410,8 @@ class Gpgga:
         self._utc_time = value.strftime("%H%M%S")
 
     def __str__(self) -> str:
-        """Return formatted GPGGA sentence string.
+        """
+        Return formatted GPGGA sentence string.
 
         Returns:
             Complete GPGGA NMEA sentence with checksum and line terminators
@@ -415,7 +429,8 @@ class Gpgga:
 
 
 class Gpgll:
-    """Position data: position fix, time of position fix, and status.
+    """
+    Position data: position fix, time of position fix, and status.
 
     Provides geographic position (latitude/longitude), UTC time of position fix,
     and data validity status information.
@@ -432,7 +447,8 @@ class Gpgll:
         data_status: str = "A",
         faa_mode: str = "A",
     ) -> None:
-        """Initialize GPGLL sentence with position and time data.
+        """
+        Initialize GPGLL sentence with position and time data.
 
         Args:
             utc_date_time: Current UTC date and time
@@ -453,7 +469,8 @@ class Gpgll:
 
     @property
     def utc_time(self) -> str:
-        """Get UTC time in HHMMSS format.
+        """
+        Get UTC time in HHMMSS format.
 
         Returns:
             UTC time as string in HHMMSS format
@@ -463,7 +480,8 @@ class Gpgll:
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
-        """Set UTC time from datetime object.
+        """
+        Set UTC time from datetime object.
 
         Args:
             value: Datetime object to extract time from
@@ -475,7 +493,8 @@ class Gpgll:
         self._utc_time = value.strftime("%H%M%S")
 
     def __str__(self) -> str:
-        """Return formatted GPGLL sentence string.
+        """
+        Return formatted GPGLL sentence string.
 
         Returns:
             Complete GPGLL NMEA sentence with checksum and line terminators
@@ -491,7 +510,8 @@ class Gpgll:
 
 
 class Gprmc:
-    """Recommended minimum specific GPS/Transit data.
+    """
+    Recommended minimum specific GPS/Transit data.
 
     Contains the most essential GPS navigation information including position,
     speed over ground, course made good, date, and time.
@@ -512,7 +532,8 @@ class Gprmc:
         magnetic_var_value: str = "",
         magnetic_var_direct: str = "",
     ) -> None:
-        """Initialize GPRMC sentence with position, speed, and course data.
+        """
+        Initialize GPRMC sentence with position, speed, and course data.
 
         Args:
             utc_date_time: Current UTC date and time
@@ -544,7 +565,8 @@ class Gprmc:
 
     @property
     def utc_time(self) -> str:
-        """Get UTC time in HHMMSS format.
+        """
+        Get UTC time in HHMMSS format.
 
         Returns:
             UTC time as string in HHMMSS format
@@ -554,7 +576,8 @@ class Gprmc:
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
-        """Set UTC time and date from datetime object.
+        """
+        Set UTC time and date from datetime object.
 
         Args:
             value: Datetime object to extract time and date from
@@ -568,7 +591,8 @@ class Gprmc:
 
     @property
     def utc_date(self) -> str:
-        """Get UTC date in DDMMYY format.
+        """
+        Get UTC date in DDMMYY format.
 
         Returns:
             UTC date as string in DDMMYY format
@@ -578,7 +602,8 @@ class Gprmc:
 
     @utc_date.setter
     def utc_date(self, value: datetime.datetime) -> None:
-        """Set UTC date from datetime object.
+        """
+        Set UTC date from datetime object.
 
         Args:
             value: Datetime object to extract date from
@@ -590,7 +615,8 @@ class Gprmc:
         self._utc_date = value.strftime("%d%m%y")
 
     def __str__(self) -> str:
-        """Return formatted GPRMC sentence string.
+        """
+        Return formatted GPRMC sentence string.
 
         Returns:
             Complete GPRMC NMEA sentence with checksum and line terminators
@@ -607,7 +633,8 @@ class Gprmc:
 
 
 class Gpgsa:
-    """GPS DOP and active satellites.
+    """
+    GPS DOP and active satellites.
 
     Provides information about GPS fix mode, satellites used in position
     calculation, and dilution of precision (DOP) values.
@@ -626,7 +653,8 @@ class Gpgsa:
         hdop: float = DEFAULT_HDOP,
         vdop: float = DEFAULT_VDOP,
     ) -> None:
-        """Initialize GPGSA sentence with satellite and DOP data.
+        """
+        Initialize GPGSA sentence with satellite and DOP data.
 
         Args:
             gpgsv_group: GPGSV group containing satellite information
@@ -649,7 +677,8 @@ class Gpgsa:
 
     @property
     def sats_ids(self) -> list[str]:
-        """Get list of satellite IDs.
+        """
+        Get list of satellite IDs.
 
         Returns:
             List of satellite ID strings used in position fix
@@ -659,7 +688,8 @@ class Gpgsa:
 
     @sats_ids.setter
     def sats_ids(self, value: list[str]) -> None:
-        """Set satellite IDs by randomly sampling from available satellites.
+        """
+        Set satellite IDs by randomly sampling from available satellites.
 
         Args:
             value: List of available satellite IDs to sample from
@@ -672,7 +702,8 @@ class Gpgsa:
 
     @property
     def sats_count(self) -> int:
-        """Get count of active satellites.
+        """
+        Get count of active satellites.
 
         Returns:
             Number of satellites used in position fix
@@ -681,7 +712,8 @@ class Gpgsa:
         return len(self.sats_ids)
 
     def __str__(self) -> str:
-        """Return formatted GPGSA sentence string.
+        """
+        Return formatted GPGSA sentence string.
 
         Returns:
             Complete GPGSA NMEA sentence with checksum and line terminators
@@ -701,7 +733,8 @@ class Gpgsa:
 
 
 class GpgsvGroup:
-    """Initializes the relevant number of GPGSV sentences based on satellite count.
+    """
+    Initializes the relevant number of GPGSV sentences based on satellite count.
 
     Manages multiple GPGSV sentences when more than MAX_SATELLITES_PER_SENTENCE satellites are visible,
     as each GPGSV sentence can contain information for up to MAX_SATELLITES_PER_SENTENCE satellites.
@@ -710,7 +743,8 @@ class GpgsvGroup:
     sats_in_sentence: int = MAX_SATELLITES_PER_SENTENCE
 
     def __init__(self, sats_total: int = 15) -> None:
-        """Initialize GPGSV group with specified number of satellites.
+        """
+        Initialize GPGSV group with specified number of satellites.
 
         Args:
             sats_total: Total number of satellites to simulate (minimum MIN_SATELLITES_FOR_FIX)
@@ -744,7 +778,8 @@ class GpgsvGroup:
 
     @property
     def sats_total(self) -> int:
-        """Get total number of satellites.
+        """
+        Get total number of satellites.
 
         Returns:
             Total number of satellites in the group
@@ -754,7 +789,8 @@ class GpgsvGroup:
 
     @sats_total.setter
     def sats_total(self, value: int) -> None:
-        """Set total number of satellites (minimum 4).
+        """
+        Set total number of satellites (minimum 4).
 
         Args:
             value: Number of satellites (will be set to 4 if less than 4)
@@ -769,7 +805,8 @@ class GpgsvGroup:
             self._sats_total = value
 
     def __str__(self) -> str:
-        """Return formatted string of all GPGSV sentences.
+        """
+        Return formatted string of all GPGSV sentences.
 
         Returns:
             Concatenated string of all GPGSV sentences in the group
@@ -782,7 +819,8 @@ class GpgsvGroup:
 
 
 class Gpgsv:
-    """GPS Satellites in view with randomly generated satellite data.
+    """
+    GPS Satellites in view with randomly generated satellite data.
 
     Provides information about satellites in view including satellite ID,
     elevation, azimuth, and signal-to-noise ratio for up to 4 satellites per sentence.
@@ -800,7 +838,8 @@ class Gpgsv:
         sats_in_sentence: int,
         sats_ids: list[str],
     ) -> None:
-        """Initialize GPGSV sentence with satellite visibility data.
+        """
+        Initialize GPGSV sentence with satellite visibility data.
 
         Args:
             num_of_gsv_in_group: Total number of GPGSV sentences in the group
@@ -827,7 +866,8 @@ class Gpgsv:
             self.sats_details += f",{satellite_id},{elevation:02d},{azimuth:03d},{snr:02d}"
 
     def __str__(self) -> str:
-        """Return formatted GPGSV sentence string.
+        """
+        Return formatted GPGSV sentence string.
 
         Returns:
             Complete GPGSV NMEA sentence with checksum and line terminators
@@ -840,7 +880,8 @@ class Gpgsv:
 
 
 class Gphdt:
-    """Heading, True.
+    """
+    Heading, True.
 
     Actual vessel heading in degrees true produced by any device or system
     producing true heading. Provides compass heading relative to true north.
@@ -851,7 +892,8 @@ class Gphdt:
     sentence_id: str = "GPHDT"
 
     def __init__(self, heading: float) -> None:
-        """Initialize GPHDT sentence with heading data.
+        """
+        Initialize GPHDT sentence with heading data.
 
         Args:
             heading: True heading in degrees (0-359)
@@ -863,7 +905,8 @@ class Gphdt:
         self.heading: float = heading
 
     def __str__(self) -> str:
-        """Return formatted GPHDT sentence string.
+        """
+        Return formatted GPHDT sentence string.
 
         Returns:
             Complete GPHDT NMEA sentence with checksum and line terminators
@@ -874,7 +917,8 @@ class Gphdt:
 
 
 class Gpvtg:
-    """Track Made Good and Ground Speed.
+    """
+    Track Made Good and Ground Speed.
 
     Provides course and speed information including true and magnetic headings
     and speed over ground in both knots and kilometers per hour.
@@ -890,7 +934,8 @@ class Gpvtg:
         sog_knots: float,
         heading_magnetic: float | str = "",
     ) -> None:
-        """Initialize GPVTG sentence with heading and speed data.
+        """
+        Initialize GPVTG sentence with heading and speed data.
 
         Args:
             heading_true: True heading in degrees
@@ -907,7 +952,8 @@ class Gpvtg:
 
     @property
     def sog_kmhr(self) -> float:
-        """Return speed over ground in kilometers/hour.
+        """
+        Return speed over ground in kilometers/hour.
 
         Returns:
             Speed over ground converted from knots to km/h
@@ -916,7 +962,8 @@ class Gpvtg:
         return round(self.sog_knots * KNOTS_TO_KMHR_CONVERSION, 1)
 
     def __str__(self) -> str:
-        """Return formatted GPVTG sentence string.
+        """
+        Return formatted GPVTG sentence string.
 
         Returns:
             Complete GPVTG NMEA sentence with checksum and line terminators
@@ -929,7 +976,8 @@ class Gpvtg:
 
 
 class Gpzda:
-    """Time and date - UTC and local Time Zone.
+    """
+    Time and date - UTC and local Time Zone.
 
     Provides UTC time and date information along with local time zone offset.
     Essential for applications requiring precise timing information.
@@ -940,7 +988,8 @@ class Gpzda:
     sentence_id: str = "GPZDA"
 
     def __init__(self, utc_date_time: datetime.datetime) -> None:
-        """Initialize GPZDA sentence with date and time data.
+        """
+        Initialize GPZDA sentence with date and time data.
 
         Args:
             utc_date_time: Current UTC date and time
@@ -954,7 +1003,8 @@ class Gpzda:
 
     @property
     def utc_time(self) -> str:
-        """Get UTC time in HHMMSS format.
+        """
+        Get UTC time in HHMMSS format.
 
         Returns:
             UTC time as string in HHMMSS format
@@ -964,7 +1014,8 @@ class Gpzda:
 
     @utc_time.setter
     def utc_time(self, value: datetime.datetime) -> None:
-        """Set UTC time and date from datetime object.
+        """
+        Set UTC time and date from datetime object.
 
         Args:
             value: Datetime object to extract time and date from
@@ -978,7 +1029,8 @@ class Gpzda:
 
     @property
     def utc_date(self) -> str:
-        """Get UTC date in DD,MM,YYYY format.
+        """
+        Get UTC date in DD,MM,YYYY format.
 
         Returns:
             UTC date as string in DD,MM,YYYY format
@@ -988,7 +1040,8 @@ class Gpzda:
 
     @utc_date.setter
     def utc_date(self, value: datetime.datetime) -> None:
-        """Set UTC date from datetime object.
+        """
+        Set UTC date from datetime object.
 
         Args:
             value: Datetime object to extract date from
@@ -1000,7 +1053,8 @@ class Gpzda:
         self._utc_date = value.strftime("%d,%m,%Y")
 
     def __str__(self) -> str:
-        """Return formatted GPZDA sentence string.
+        """
+        Return formatted GPZDA sentence string.
 
         Returns:
             Complete GPZDA NMEA sentence with checksum and line terminators

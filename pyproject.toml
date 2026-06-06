@@ -31,8 +31,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.5",
+    "hypothesis>=6.0",
+    "mypy>=2.1",
+    "pip-audit>=2.10",
+    "pre-commit>=4.6",
+    "pytest>=9.0",
+    "pytest-cov>=7.1",
     "ruff>=0.15",
-    "pre-commit",
 ]
 
 [project.scripts]
@@ -48,7 +54,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "N", "I", "UP", "S", "D", "B", "A", "C4", "SIM"]
-ignore = ["S311"]  # S311: random is fine for non-crypto use
+ignore = [
+    "S311",  # S311: random is fine for non-crypto use
+    "D203",  # D203 conflicts with Ruff formatter; use D211 instead
+    "D212",  # Prefer multi-line docstring summaries on the second line (D213)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D100", "D102", "S104"]

@@ -15,9 +15,12 @@ venv/
 python/
 dist/
 .mypy_cache/
+_version.py
 
 # Pytest
 .coverage
+coverage.xml
+.hypothesis/
 .pytest_cache/
 htmlcov/
 
