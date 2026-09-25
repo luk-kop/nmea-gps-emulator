@@ -3,7 +3,7 @@ SRC_DIR := src/nmea_gps_emulator
 TEST_DIR := tests
 UV_RUN := uv run --python $(PYTHON) --extra dev
 
-.PHONY: help install sync test lint format format-check typecheck check build run audit pre-commit
+.PHONY: help install sync test lint format format-check typecheck check build run audit clean
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "%-14s %s\n", $$1, $$2}'
@@ -39,5 +39,7 @@ run: ## Run the emulator CLI from the local environment.
 audit: ## Run dependency vulnerability checks.
 	$(UV_RUN) pip-audit --skip-editable
 
-pre-commit: ## Install pre-commit hooks.
-	$(UV_RUN) pre-commit install
+clean: ## Remove virtual environments and generated files.
+	rm -rf .venv venv dist htmlcov .pytest_cache .mypy_cache .ruff_cache .hypothesis
+	rm -f .coverage coverage.xml
+	find src tests -type d -name __pycache__ -prune -exec rm -rf {} +

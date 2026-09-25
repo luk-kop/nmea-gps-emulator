@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "psutil>=7.2",
-    "pyproj>=3.7",
+    "pyproj>=3.8",
     "pyserial>=3.5",
 ]
 
